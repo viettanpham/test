@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils"
 import { GameProvider } from "@/lib/game/store"
-import { Boxes, Flag, LayoutDashboard, Radar, Rocket, Warehouse } from "lucide-react"
+import { Boxes, Flag, LayoutDashboard, Radar, Rocket, Warehouse, UserRound } from "lucide-react"
 import { useState } from "react"
 import { BasePanel } from "./base-panel"
 import { BattleModal } from "./battle-modal"
@@ -12,11 +12,13 @@ import { FleetPanel } from "./fleet-panel"
 import { HudBar } from "./hud-bar"
 import { MapPanel } from "./map-panel"
 import { WarRoom } from "./war-room"
+import { PilotPanel } from "./pilot-panel"
 
-type Tab = "dashboard" | "fleet" | "equipment" | "base" | "map" | "war"
+type Tab = "dashboard" | "pilot" | "fleet" | "equipment" | "base" | "map" | "war"
 
 const NAV: { id: Tab; label: string; icon: typeof Radar }[] = [
   { id: "dashboard", label: "Tổng quan", icon: LayoutDashboard },
+  { id: "pilot", label: "Nhân vật", icon: UserRound },
   { id: "fleet", label: "Hạm đội", icon: Rocket },
   { id: "equipment", label: "Trang bị", icon: Boxes },
   { id: "base", label: "Căn cứ", icon: Warehouse },
@@ -77,6 +79,7 @@ function ConsoleBody() {
       {/* Content */}
       <main className="min-w-0 flex-1 p-3 md:p-5">
         {tab === "dashboard" && <Dashboard onNavigate={setTab} />}
+        {tab === "pilot" && <PilotPanel />}
         {tab === "fleet" && <FleetPanel />}
         {tab === "equipment" && <EquipmentPanel />}
         {tab === "base" && <BasePanel />}

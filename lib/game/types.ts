@@ -4,6 +4,48 @@ export type StatKey = "hp" | "attack" | "defense" | "speed" | "evasion" | "energ
 
 export type Stats = Record<StatKey, number>
 
+export type PilotStatKey = "attack" | "defense" | "agility" | "shield" | "vision"
+export type PilotStats = Record<PilotStatKey, number>
+
+export type PilotSkill = {
+  id: string
+  name: string
+  desc: string
+  level: number
+  maxLevel: number
+  effect: string
+  category: "common" | "gear"
+}
+
+export type PilotProfile = {
+  id: string
+  name: string
+  age: number
+  gender: string
+  description: string
+  specialty: string
+  gear: GearClass
+  avatar: string
+  aircraftName: string
+  armorType: string
+  baseStats: PilotStats
+  trail: string[]
+  skills: PilotSkill[]
+}
+
+export type Pilot = {
+  profileId: string
+  name: string
+  level: number
+  xp: number
+  skillPoints: number
+  stats: PilotStats
+  skills: PilotSkill[]
+  avatar: string
+  aircraftUid: string
+  selectedAtDay: number
+}
+
 export type Resources = {
   credits: number
   alloy: number
@@ -95,6 +137,11 @@ export type Sector = {
   id: string
   name: string
   kind: SectorKind
+  isMainBase?: boolean
+  baseLevel?: number
+  baseGarrison?: number
+  baseCapacity?: number
+  baseBuildings?: number
   x: number // 0..100 map coords
   y: number
   /** enemy defensive power rating */
@@ -142,6 +189,7 @@ export type BattleResult = {
 export type GameState = {
   commander: string
   day: number
+  pilot: Pilot
   resources: Resources
   army: number // current troop count
   armyCap: number

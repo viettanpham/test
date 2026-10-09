@@ -7,7 +7,7 @@ import {
   useReducer,
   type ReactNode,
 } from "react"
-import { BUILDING_ORDER, GEAR_CLASSES, ITEM_MAP, SECTORS } from "./data"
+import { BUILDING_ORDER, GEAR_CLASSES, ITEM_MAP, PILOT_PROFILES, SECTORS } from "./data"
 import {
   armyCap as calcArmyCap,
   baseStatsAtLevel,
@@ -70,15 +70,19 @@ function createInitialState(): GameState {
   const i3 = makeItem("e_ion")
   g1.equipped = { weapon: i1.uid, armor: i2.uid }
   g2.equipped = { engine: i3.uid }
+  const g3 = makeGear("B", "Hammerfall")
+  const g4 = makeGear("M", "Aurora")
+  const g5 = makeGear("I", "Wraith")
   const buildings = initialBuildings()
 
   return {
     commander: "Chỉ Huy",
     day: 1,
+    pilot: { profileId: "marcus", name: "Marcus", level: 12, xp: 640, skillPoints: 5, stats: { ...PILOT_PROFILES[0].baseStats }, skills: PILOT_PROFILES[0].skills.map((s) => ({ ...s })), avatar: PILOT_PROFILES[0].avatar, aircraftUid: g1.uid, selectedAtDay: 1 },
     resources: { credits: 3500, alloy: 1200, energy: 600, crystal: 40 },
     army: 60,
     armyCap: calcArmyCap(buildings),
-    gears: [g1, g2],
+    gears: [g1, g2, g3, g4, g5],
     inventory: [i1, i2, i3, makeItem("w_pulse"), makeItem("a_plate")],
     buildings,
     sectors: SECTORS.map((s) => ({ ...s })),
@@ -130,7 +134,12 @@ export type Action =
   | { type: "UNEQUIP_SLOT"; gearUid: string; slot: EquipSlot }
   | { type: "UPGRADE_BUILDING"; key: BuildingKey }
   | { type: "LAUNCH_BATTLE"; sectorId: string; gearUids: string[] }
+  | { type: "UPGRADE_MAIN_BASE"; sectorId: string }
+  | { type: "GARRISON_MAIN_BASE"; sectorId: string; amount: number }
   | { type: "DISMISS_BATTLE" }
+  | { type: "ALLOCATE_PILOT_STAT"; stat: import("./types").PilotStatKey }
+  | { type: "UPGRADE_PILOT_SKILL"; skillId: string }
+  | { type: "SELECT_PILOT"; profileId: string }
 
 const REPAIR_CREDIT_PER_HP = 0.4
 
@@ -355,6 +364,47 @@ function reducer(state: GameState, action: Action): GameState {
         lastBattle: result,
         eventLog: events,
       }
+    }
+
+    case "UPGRADE_MAIN_BASE": {
+      const sector = state.sectors.find((s) => s.id === action.sectorId)
+      if (!sector?.isMainBase || !sector.captured) return state
+      const level = sector.baseLevel ?? 1
+      const cost = { credits: 1800 * level, alloy: 700 * level, crystal: 18 * level }
+      if (!canAfford(state.resources, cost)) return state
+      const sectors = state.sectors.map((s) => s.id === sector.id
+        ? { ...s, baseLevel: level + 1, baseCapacity: (s.baseCapacity ?? 120) + 40, baseBuildings: (s.baseBuildings ?? 1) + 1 }
+        : s)
+      return { ...state, resources: spend(state.resources, cost), sectors, eventLog: pushEvent(state, `Nâng cấp ${sector.name} lên cấp ${level + 1}.`) }
+    }
+
+    case "GARRISON_MAIN_BASE": {
+      const sector = state.sectors.find((s) => s.id === action.sectorId)
+      if (!sector?.isMainBase || !sector.captured) return state
+      const current = sector.baseGarrison ?? 0
+      const cap = sector.baseCapacity ?? 120
+      const amount = Math.max(0, Math.min(action.amount, state.army, cap - current))
+      if (!amount) return state
+      const sectors = state.sectors.map((s) => s.id === sector.id ? { ...s, baseGarrison: current + amount } : s)
+      return { ...state, army: state.army - amount, sectors, eventLog: pushEvent(state, `Điều ${amount} quân đến đồn trú tại ${sector.name}.`) }
+    }
+
+    case "ALLOCATE_PILOT_STAT":
+      if (state.pilot.skillPoints <= 0) return state
+      return { ...state, pilot: { ...state.pilot, skillPoints: state.pilot.skillPoints - 1, stats: { ...state.pilot.stats, [action.stat]: state.pilot.stats[action.stat] + 1 } } }
+
+    case "UPGRADE_PILOT_SKILL": {
+      const skill = state.pilot.skills.find((s) => s.id === action.skillId)
+      if (!skill || state.pilot.skillPoints <= 0 || skill.level >= skill.maxLevel) return state
+      return { ...state, pilot: { ...state.pilot, skillPoints: state.pilot.skillPoints - 1, skills: state.pilot.skills.map((s) => s.id === skill.id ? { ...s, level: s.level + 1 } : s) }, eventLog: pushEvent(state, `Nâng cấp kỹ năng ${skill.name} lên cấp ${skill.level + 1}.`) }
+    }
+
+    case "SELECT_PILOT": {
+      const profile = PILOT_PROFILES.find((p) => p.id === action.profileId)
+      if (!profile || profile.id === state.pilot.profileId || state.day - state.pilot.selectedAtDay < 10) return state
+      const aircraft = state.gears.find((g) => g.cls === profile.gear)
+      if (!aircraft) return state
+      return { ...state, pilot: { ...state.pilot, profileId: profile.id, name: profile.name, stats: { ...profile.baseStats }, skills: profile.skills.map((s) => ({ ...s })), avatar: profile.avatar, aircraftUid: aircraft.uid, selectedAtDay: state.day }, eventLog: pushEvent(state, `Đổi phi công sang ${profile.name}. Kỹ năng và phi cơ liên kết đã kích hoạt.`) }
     }
 
     case "DISMISS_BATTLE":

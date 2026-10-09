@@ -56,6 +56,22 @@ export const GEAR_CLASSES: Record<GearClass, GearClassDef> = {
 
 export const GEAR_ORDER: GearClass[] = ["A", "B", "I", "M"]
 
+const commonSkills = (gear: GearClass, skills: [string, string, string][]) => [
+  { id: "fire-shot", name: "Fire Shot", desc: "Tăng sức tấn công vũ khí thường", level: 1, maxLevel: 5, effect: "+4% weapon ATK / cấp", category: "common" as const },
+  { id: "missile-shot", name: "Missile Shot", desc: "Tăng sức tấn công tên lửa", level: 1, maxLevel: 5, effect: "+4% missile ATK / cấp", category: "common" as const },
+  { id: "concentration", name: "Concentration", desc: "Tăng độ chính xác và xác suất trúng", level: 1, maxLevel: 5, effect: "+3% accuracy / cấp", category: "common" as const },
+  { id: "evasion-up", name: "Evasion Up", desc: "Nâng cao khả năng né tránh", level: 1, maxLevel: 5, effect: "+3 EVA / cấp", category: "common" as const },
+  { id: "defense-up", name: "Defense Up", desc: "Tăng chỉ số phòng thủ", level: 1, maxLevel: 5, effect: "+3% DEF / cấp", category: "common" as const },
+  ...skills.map(([id, name, desc]) => ({ id, name, desc, level: 1, maxLevel: 5, effect: "+8% hiệu lực / cấp", category: "gear" as const })),
+]
+
+export const PILOT_PROFILES = [
+  { id: "marcus", name: "Marcus", age: 30, gender: "Nam", description: "Chiến binh dày dạn, chuyên gia vũ khí", specialty: "Weapons Specialist", gear: "A" as const, avatar: "/images/marcus-portrait.png", aircraftName: "Vanguard", armorType: "Heavy Armor", baseStats: { attack: 10, defense: 5, agility: 4, shield: 8, vision: 3 }, trail: ["+20% sát thương vũ khí Cannon", "+30% chỉ số trang bị ARMOR"], skills: commonSkills("A", [["siege-mode", "Siege Mode", "Chuyển sang chế độ pháo đài, tăng tầm bắn"], ["snare-shot", "Snare Shot", "Bắn đạn ghìm, làm chậm mục tiêu"], ["barrier", "Barrier", "Dựng khiên chắn cho phi cơ"]]) },
+  { id: "valentine", name: "Valentine", age: 22, gender: "Nữ", description: "Phi công cứu hộ quyến rũ và tận tâm", specialty: "Rescue / Support", gear: "M" as const, avatar: "/images/valentine-portrait.png", aircraftName: "Aurora", armorType: "Support Armor", baseStats: { attack: 3, defense: 8, agility: 4, shield: 9, vision: 6 }, trail: ["+30% chỉ số trang bị ARMOR", "+30% DEF phi cơ", "+30% hiệu quả hồi máu đồng minh"], skills: commonSkills("M", [["healing-field", "Healing Field", "Tạo vùng hồi phục cho toàn hạm đội"], ["raging-fire", "Raging Fire", "Kích hoạt hỏa lực hỗ trợ"], ["full-recovery", "Full Recovery", "Hồi phục mạnh cho một phi cơ"]]) },
+  { id: "alviss", name: "Alviss", age: 24, gender: "Nam", description: "Chiến thuật gia với đôi mắt như diều hâu", specialty: "Tactical Interceptor", gear: "I" as const, avatar: "/images/alviss-portrait.png", aircraftName: "Falcon", armorType: "Light Armor", baseStats: { attack: 11, defense: 3, agility: 12, shield: 2, vision: 2 }, trail: ["+10% chỉ số trang bị WEAPON", "+30% chỉ số MISSILE", "+10% chỉ số ENGINE"], skills: commonSkills("I", [["frenzy", "Frenzy", "Tăng tốc độ khai hỏa và sát thương"], ["overbooster", "Overbooster", "Đẩy động cơ vượt giới hạn"], ["berserker", "Berserker", "Tăng sức mạnh khi HP thấp"]]) },
+  { id: "eric", name: "Eric", age: 22, gender: "Nam", description: "Phi công điềm đạm, thiên tài điều khiển oanh tạc cơ", specialty: "Aircraft Specialist", gear: "B" as const, avatar: "/images/eric-portrait.png", aircraftName: "Hammerfall", armorType: "Siege Armor", baseStats: { attack: 15, defense: 5, agility: 2, shield: 6, vision: 2 }, trail: ["+50% chỉ số trang bị MISSILE"], skills: commonSkills("B", [["ground-bombing", "Ground Bombing Mode", "Oanh tạc mặt đất, phá căn cứ"], ["air-bombing", "Air Bombing Mode", "Tập trung hỏa lực trên không"], ["big-boom", "Big Boom", "Đạn nổ diện rộng cực mạnh"]]) },
+] as const
+
 export const ITEM_DEFS: ItemDef[] = [
   // Weapons
   {
@@ -304,6 +320,7 @@ export const SECTORS: Sector[] = [
     id: "s3",
     name: "Pháo Đài Nebula",
     kind: "base",
+    isMainBase: true,
     x: 58,
     y: 60,
     threat: 980,
@@ -332,6 +349,7 @@ export const SECTORS: Sector[] = [
     id: "s5",
     name: "Căn Cứ Vệ Tinh Orion",
     kind: "base",
+    isMainBase: true,
     x: 70,
     y: 40,
     threat: 1500,
@@ -371,15 +389,15 @@ export const SECTORS: Sector[] = [
     faction: "Đế Chế Arclight",
   },
   { id: "s8", name: "Trạm Aurora", kind: "outpost", x: 15, y: 48, threat: 460, garrison: 52, reward: { credits: 1100, alloy: 340 }, troopReward: 35, captured: false, recommendedPower: 2600, faction: "ANI" },
-  { id: "s9", name: "Cổng BCU Delta", kind: "base", x: 28, y: 24, threat: 880, garrison: 105, reward: { credits: 2600, alloy: 740, crystal: 60 }, troopReward: 78, captured: false, recommendedPower: 5900, faction: "BCU" },
+  { id: "s9", name: "Cổng BCU Delta", kind: "base", isMainBase: true, x: 28, y: 24, threat: 880, garrison: 105, reward: { credits: 2600, alloy: 740, crystal: 60 }, troopReward: 78, captured: false, recommendedPower: 5900, faction: "BCU" },
   { id: "s10", name: "Mỏ Lumen", kind: "outpost", x: 47, y: 30, threat: 640, garrison: 70, reward: { credits: 1700, alloy: 600, crystal: 35 }, troopReward: 55, captured: false, recommendedPower: 3900, faction: "NGC" },
-  { id: "s11", name: "Pháo Đài Meridian", kind: "base", x: 62, y: 82, threat: 1280, garrison: 150, reward: { credits: 4100, alloy: 1250, crystal: 110 }, troopReward: 112, captured: false, recommendedPower: 8400, faction: "BCU" },
+  { id: "s11", name: "Pháo Đài Meridian", kind: "base", isMainBase: true, x: 62, y: 82, threat: 1280, garrison: 150, reward: { credits: 4100, alloy: 1250, crystal: 110 }, troopReward: 112, captured: false, recommendedPower: 8400, faction: "BCU" },
   { id: "s12", name: "Vành Đai Polaris", kind: "outpost", x: 76, y: 74, threat: 1020, garrison: 96, reward: { credits: 3000, alloy: 880, energy: 280 }, troopReward: 88, captured: false, recommendedPower: 7000, faction: "ANI" },
   { id: "s13", name: "Tàu Mẹ BCU RED COMET", kind: "mothership", x: 92, y: 48, threat: 3600, garrison: 340, reward: { credits: 14000, alloy: 3600, crystal: 460, energy: 1600 }, troopReward: 270, captured: false, recommendedPower: 21000, faction: "BCU" },
   { id: "s14", name: "Hành Lang Vesper", kind: "outpost", x: 52, y: 12, threat: 780, garrison: 84, reward: { credits: 2200, alloy: 700, crystal: 45 }, troopReward: 64, captured: false, recommendedPower: 5000, faction: "NGC" },
-  { id: "s15", name: "Trạm Hậu Cần NGC", kind: "base", x: 88, y: 88, threat: 1780, garrison: 190, reward: { credits: 5600, alloy: 1600, crystal: 160, energy: 520 }, troopReward: 145, captured: false, recommendedPower: 10800, faction: "NGC" },
+  { id: "s15", name: "Trạm Hậu Cần NGC", kind: "base", isMainBase: true, x: 88, y: 88, threat: 1780, garrison: 190, reward: { credits: 5600, alloy: 1600, crystal: 160, energy: 520 }, troopReward: 145, captured: false, recommendedPower: 10800, faction: "NGC" },
   { id: "s16", name: "Khe Nứt Epsilon", kind: "outpost", x: 12, y: 14, threat: 920, garrison: 100, reward: { credits: 2800, alloy: 820 }, troopReward: 72, captured: false, recommendedPower: 6100, faction: "NGC" },
-  { id: "s17", name: "Căn Cứ Bastion", kind: "base", x: 40, y: 92, threat: 1450, garrison: 175, reward: { credits: 4500, alloy: 1400, crystal: 130 }, troopReward: 122, captured: false, recommendedPower: 9800, faction: "ANI" },
+  { id: "s17", name: "Căn Cứ Bastion", kind: "base", isMainBase: true, x: 40, y: 92, threat: 1450, garrison: 175, reward: { credits: 4500, alloy: 1400, crystal: 130 }, troopReward: 122, captured: false, recommendedPower: 9800, faction: "ANI" },
   { id: "s18", name: "Tàu Mẹ ANI SKY CROWN", kind: "mothership", x: 8, y: 28, threat: 3400, garrison: 310, reward: { credits: 13000, alloy: 3400, crystal: 420, energy: 1550 }, troopReward: 260, captured: false, recommendedPower: 19500, faction: "ANI" },
 ]
 
