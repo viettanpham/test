@@ -370,6 +370,17 @@ export const SECTORS: Sector[] = [
     recommendedPower: 18000,
     faction: "Đế Chế Arclight",
   },
+  { id: "s8", name: "Trạm Aurora", kind: "outpost", x: 15, y: 48, threat: 460, garrison: 52, reward: { credits: 1100, alloy: 340 }, troopReward: 35, captured: false, recommendedPower: 2600, faction: "ANI" },
+  { id: "s9", name: "Cổng BCU Delta", kind: "base", x: 28, y: 24, threat: 880, garrison: 105, reward: { credits: 2600, alloy: 740, crystal: 60 }, troopReward: 78, captured: false, recommendedPower: 5900, faction: "BCU" },
+  { id: "s10", name: "Mỏ Lumen", kind: "outpost", x: 47, y: 30, threat: 640, garrison: 70, reward: { credits: 1700, alloy: 600, crystal: 35 }, troopReward: 55, captured: false, recommendedPower: 3900, faction: "NGC" },
+  { id: "s11", name: "Pháo Đài Meridian", kind: "base", x: 62, y: 82, threat: 1280, garrison: 150, reward: { credits: 4100, alloy: 1250, crystal: 110 }, troopReward: 112, captured: false, recommendedPower: 8400, faction: "BCU" },
+  { id: "s12", name: "Vành Đai Polaris", kind: "outpost", x: 76, y: 74, threat: 1020, garrison: 96, reward: { credits: 3000, alloy: 880, energy: 280 }, troopReward: 88, captured: false, recommendedPower: 7000, faction: "ANI" },
+  { id: "s13", name: "Tàu Mẹ BCU RED COMET", kind: "mothership", x: 92, y: 48, threat: 3600, garrison: 340, reward: { credits: 14000, alloy: 3600, crystal: 460, energy: 1600 }, troopReward: 270, captured: false, recommendedPower: 21000, faction: "BCU" },
+  { id: "s14", name: "Hành Lang Vesper", kind: "outpost", x: 52, y: 12, threat: 780, garrison: 84, reward: { credits: 2200, alloy: 700, crystal: 45 }, troopReward: 64, captured: false, recommendedPower: 5000, faction: "NGC" },
+  { id: "s15", name: "Trạm Hậu Cần NGC", kind: "base", x: 88, y: 88, threat: 1780, garrison: 190, reward: { credits: 5600, alloy: 1600, crystal: 160, energy: 520 }, troopReward: 145, captured: false, recommendedPower: 10800, faction: "NGC" },
+  { id: "s16", name: "Khe Nứt Epsilon", kind: "outpost", x: 12, y: 14, threat: 920, garrison: 100, reward: { credits: 2800, alloy: 820 }, troopReward: 72, captured: false, recommendedPower: 6100, faction: "NGC" },
+  { id: "s17", name: "Căn Cứ Bastion", kind: "base", x: 40, y: 92, threat: 1450, garrison: 175, reward: { credits: 4500, alloy: 1400, crystal: 130 }, troopReward: 122, captured: false, recommendedPower: 9800, faction: "ANI" },
+  { id: "s18", name: "Tàu Mẹ ANI SKY CROWN", kind: "mothership", x: 8, y: 28, threat: 3400, garrison: 310, reward: { credits: 13000, alloy: 3400, crystal: 420, energy: 1550 }, troopReward: 260, captured: false, recommendedPower: 19500, faction: "ANI" },
 ]
 
 export const STARTING_GEAR_NAMES = ["Vanguard", "Aegis", "Falcon", "Oracle"]

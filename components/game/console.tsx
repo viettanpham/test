@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils"
 import { GameProvider } from "@/lib/game/store"
-import { Boxes, LayoutDashboard, Radar, Rocket, Warehouse } from "lucide-react"
+import { Boxes, Flag, LayoutDashboard, Radar, Rocket, Warehouse } from "lucide-react"
 import { useState } from "react"
 import { BasePanel } from "./base-panel"
 import { BattleModal } from "./battle-modal"
@@ -11,15 +11,17 @@ import { EquipmentPanel } from "./equipment-panel"
 import { FleetPanel } from "./fleet-panel"
 import { HudBar } from "./hud-bar"
 import { MapPanel } from "./map-panel"
+import { WarRoom } from "./war-room"
 
-type Tab = "dashboard" | "fleet" | "equipment" | "base" | "map"
+type Tab = "dashboard" | "fleet" | "equipment" | "base" | "map" | "war"
 
 const NAV: { id: Tab; label: string; icon: typeof Radar }[] = [
   { id: "dashboard", label: "Tổng quan", icon: LayoutDashboard },
   { id: "fleet", label: "Hạm đội", icon: Rocket },
   { id: "equipment", label: "Trang bị", icon: Boxes },
   { id: "base", label: "Căn cứ", icon: Warehouse },
-  { id: "map", label: "Chiến dịch", icon: Radar },
+  { id: "map", label: "Infinity", icon: Radar },
+  { id: "war", label: "Chiến sự", icon: Flag },
 ]
 
 export function GameConsole() {
@@ -79,6 +81,7 @@ function ConsoleBody() {
         {tab === "equipment" && <EquipmentPanel />}
         {tab === "base" && <BasePanel />}
         {tab === "map" && <MapPanel />}
+        {tab === "war" && <WarRoom />}
       </main>
     </div>
   )

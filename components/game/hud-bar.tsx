@@ -5,6 +5,7 @@ import { fleetPower } from "@/lib/game/engine"
 import { useGame } from "@/lib/game/store"
 import { CalendarClock, Radar, Rocket, Users } from "lucide-react"
 import { useState } from "react"
+import { AvatarStrip } from "./war-room"
 import { RESOURCE_META, ResourcePill, formatNum } from "./shared"
 import type { ResourceKey } from "@/lib/game/types"
 
@@ -36,6 +37,7 @@ export function HudBar() {
 
         {/* Commander */}
         <div className="hidden items-center gap-2 border-l border-border/60 pl-6 md:flex">
+          <AvatarStrip />
           <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
             Chỉ huy
           </span>
