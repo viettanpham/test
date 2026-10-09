@@ -95,6 +95,11 @@ export type Sector = {
   id: string
   name: string
   kind: SectorKind
+  isMainBase?: boolean
+  baseLevel?: number
+  baseGarrison?: number
+  baseCapacity?: number
+  baseBuildings?: number
   x: number // 0..100 map coords
   y: number
   /** enemy defensive power rating */

@@ -130,6 +130,8 @@ export type Action =
   | { type: "UNEQUIP_SLOT"; gearUid: string; slot: EquipSlot }
   | { type: "UPGRADE_BUILDING"; key: BuildingKey }
   | { type: "LAUNCH_BATTLE"; sectorId: string; gearUids: string[] }
+  | { type: "UPGRADE_MAIN_BASE"; sectorId: string }
+  | { type: "GARRISON_MAIN_BASE"; sectorId: string; amount: number }
   | { type: "DISMISS_BATTLE" }
 
 const REPAIR_CREDIT_PER_HP = 0.4
@@ -355,6 +357,29 @@ function reducer(state: GameState, action: Action): GameState {
         lastBattle: result,
         eventLog: events,
       }
+    }
+
+    case "UPGRADE_MAIN_BASE": {
+      const sector = state.sectors.find((s) => s.id === action.sectorId)
+      if (!sector?.isMainBase || !sector.captured) return state
+      const level = sector.baseLevel ?? 1
+      const cost = { credits: 1800 * level, alloy: 700 * level, crystal: 18 * level }
+      if (!canAfford(state.resources, cost)) return state
+      const sectors = state.sectors.map((s) => s.id === sector.id
+        ? { ...s, baseLevel: level + 1, baseCapacity: (s.baseCapacity ?? 120) + 40, baseBuildings: (s.baseBuildings ?? 1) + 1 }
+        : s)
+      return { ...state, resources: spend(state.resources, cost), sectors, eventLog: pushEvent(state, `Nâng cấp ${sector.name} lên cấp ${level + 1}.`) }
+    }
+
+    case "GARRISON_MAIN_BASE": {
+      const sector = state.sectors.find((s) => s.id === action.sectorId)
+      if (!sector?.isMainBase || !sector.captured) return state
+      const current = sector.baseGarrison ?? 0
+      const cap = sector.baseCapacity ?? 120
+      const amount = Math.max(0, Math.min(action.amount, state.army, cap - current))
+      if (!amount) return state
+      const sectors = state.sectors.map((s) => s.id === sector.id ? { ...s, baseGarrison: current + amount } : s)
+      return { ...state, army: state.army - amount, sectors, eventLog: pushEvent(state, `Điều ${amount} quân đến đồn trú tại ${sector.name}.`) }
     }
 
     case "DISMISS_BATTLE":

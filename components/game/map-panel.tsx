@@ -6,6 +6,8 @@ import { computeStats, fleetPower, gearPower, maxHp } from "@/lib/game/engine"
 import { useGame } from "@/lib/game/store"
 import { cn } from "@/lib/utils"
 import {
+  ArrowUp,
+  Building2,
   CheckCircle2,
   Coins,
   Crosshair,
@@ -13,6 +15,7 @@ import {
   Rocket,
   Skull,
   Swords,
+  Shield,
   Users,
 } from "lucide-react"
 import { useState } from "react"
@@ -36,6 +39,11 @@ const EDGES: [string, string][] = [
   ["s3", "s5"],
   ["s6", "s7"],
   ["s5", "s7"],
+  ["s8", "s9"], ["s8", "s10"], ["s9", "s10"],
+  ["s10", "s14"], ["s14", "s16"], ["s16", "s18"],
+  ["s11", "s12"], ["s12", "s13"], ["s13", "s15"],
+  ["s15", "s17"], ["s17", "s11"], ["s10", "s3"],
+  ["s9", "s4"], ["s12", "s6"],
 ]
 
 const KIND_META: Record<SectorKind, { label: string; size: number; icon: typeof Radar }> = {
@@ -150,10 +158,29 @@ export function MapPanel() {
 
               <div className="grid grid-cols-2 gap-2">
                 <Metric icon={<Swords className="size-3.5" />} label="Uy hiếp" value={formatNum(selected.threat)} />
-                <Metric icon={<Users className="size-3.5" />} label="Đồn trú" value={formatNum(selected.garrison)} />
+                <Metric icon={<Users className="size-3.5" />} label="Đồn trú" value={formatNum(selected.baseGarrison ?? selected.garrison)} />
                 <Metric icon={<Radar className="size-3.5" />} label="Đề nghị PWR" value={formatNum(selected.recommendedPower)} />
                 <Metric icon={<Users className="size-3.5" />} label="Quân thưởng" value={`+${selected.troopReward}`} />
               </div>
+
+              {selected.isMainBase && (
+                <div className="border border-primary/40 bg-primary/5 p-2.5">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 font-display text-xs font-700 uppercase tracking-wider text-primary"><Building2 className="size-3.5" /> Căn cứ trọng điểm</span>
+                    <span className="font-mono text-[10px] text-muted-foreground">LV.{selected.baseLevel ?? 1} · {selected.baseBuildings ?? 1} công trình</span>
+                  </div>
+                  <div className="mb-2 h-1.5 overflow-hidden rounded-sm bg-secondary">
+                    <div className="h-full bg-primary" style={{ width: `${Math.min(100, ((selected.baseGarrison ?? 0) / (selected.baseCapacity ?? 120)) * 100)}%` }} />
+                  </div>
+                  <div className="mb-2 flex justify-between text-[10px] text-muted-foreground"><span>Quân đồn trú</span><span className="font-mono text-foreground">{selected.baseGarrison ?? 0} / {selected.baseCapacity ?? 120}</span></div>
+                  {selected.captured ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button variant="outline" size="sm" onClick={() => dispatch({ type: "GARRISON_MAIN_BASE", sectorId: selected.id, amount: 25 })} disabled={state.army <= 0} className="text-[10px]"><Shield className="size-3" /> +25 quân</Button>
+                      <Button size="sm" onClick={() => dispatch({ type: "UPGRADE_MAIN_BASE", sectorId: selected.id })} className="text-[10px]"><ArrowUp className="size-3" /> Nâng cấp</Button>
+                    </div>
+                  ) : <p className="text-[10px] text-accent">Chiếm cứ điểm để mở khóa quyền điều khiển, đồn trú và xây dựng.</p>}
+                </div>
+              )}
 
               <div className="border border-border/50 bg-card/40 p-2.5">
                 <div className="mb-1 text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -353,6 +380,7 @@ function SectorNode({
           className={cn(
             "relative flex items-center justify-center rounded-full border-2 transition-transform group-hover:scale-110",
             active && "ring-2 ring-offset-2 ring-offset-background",
+            sector.isMainBase && "shadow-[0_0_18px_rgba(56,189,248,0.55)]",
             sector.kind === "mothership" && !sector.captured && "animate-pulse",
           )}
           style={{
@@ -368,10 +396,10 @@ function SectorNode({
           {sector.captured ? <CheckCircle2 className="size-4" /> : <Icon className="size-4" />}
         </span>
         <span
-          className="max-w-24 whitespace-nowrap rounded-sm bg-background/75 px-1 text-[9px] font-600 uppercase tracking-wide backdrop-blur-sm"
+          className="max-w-28 whitespace-nowrap rounded-sm bg-background/75 px-1 text-[9px] font-600 uppercase tracking-wide backdrop-blur-sm"
           style={{ color }}
         >
-          {sector.name}
+          {sector.isMainBase ? "◆ " : ""}{sector.name}
         </span>
       </div>
     </button>
