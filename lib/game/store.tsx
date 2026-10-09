@@ -78,7 +78,7 @@ function createInitialState(): GameState {
   return {
     commander: "Chỉ Huy",
     day: 1,
-    pilot: { profileId: "marcus", name: "Marcus", level: 12, xp: 640, skillPoints: 5, stats: { ...PILOT_PROFILES[0].baseStats }, skills: PILOT_PROFILES[0].skills.map((s) => ({ ...s })), avatar: PILOT_PROFILES[0].avatar, aircraftUid: g1.uid, selectedAtDay: 1 },
+    pilot: { profileId: "", name: "Chưa chọn", level: 1, xp: 0, skillPoints: 0, stats: { attack: 0, defense: 0, agility: 0, shield: 0, vision: 0 }, skills: [], avatar: "", aircraftUid: g1.uid, selectedAtDay: 1, hasSelectedPilot: false },
     resources: { credits: 3500, alloy: 1200, energy: 600, crystal: 40 },
     army: 60,
     armyCap: calcArmyCap(buildings),
@@ -401,10 +401,10 @@ function reducer(state: GameState, action: Action): GameState {
 
     case "SELECT_PILOT": {
       const profile = PILOT_PROFILES.find((p) => p.id === action.profileId)
-      if (!profile || profile.id === state.pilot.profileId || state.day - state.pilot.selectedAtDay < 10) return state
+      if (!profile || (state.pilot.hasSelectedPilot && profile.id === state.pilot.profileId) || (state.pilot.hasSelectedPilot && state.day - state.pilot.selectedAtDay < 10)) return state
       const aircraft = state.gears.find((g) => g.cls === profile.gear)
       if (!aircraft) return state
-      return { ...state, pilot: { ...state.pilot, profileId: profile.id, name: profile.name, stats: { ...profile.baseStats }, skills: profile.skills.map((s) => ({ ...s })), avatar: profile.avatar, aircraftUid: aircraft.uid, selectedAtDay: state.day }, eventLog: pushEvent(state, `Đổi phi công sang ${profile.name}. Kỹ năng và phi cơ liên kết đã kích hoạt.`) }
+      return { ...state, pilot: { ...state.pilot, profileId: profile.id, name: profile.name, stats: { ...profile.baseStats }, skills: profile.skills.map((s) => ({ ...s })), avatar: profile.avatar, aircraftUid: aircraft.uid, selectedAtDay: state.day, hasSelectedPilot: true }, eventLog: pushEvent(state, `Đổi phi công sang ${profile.name}. Kỹ năng và phi cơ liên kết đã kích hoạt.`) }
     }
 
     case "DISMISS_BATTLE":
