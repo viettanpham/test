@@ -1,235 +1,52 @@
-'use client'
+"use client"
 
-import { useGame } from '@/lib/game/store'
-import { GEAR_CLASSES, ITEM_MAP, PILOT_PROFILES } from '@/lib/game/data'
-import { Button } from '@/components/ui/button'
-import { Panel } from './shared'
-import { Brain, Crosshair, Gauge, Shield, Sparkles, Target, Wrench, Lock, UserRound, Plane } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import type { PilotStatKey } from '@/lib/game/types'
+import { useState } from "react"
+import { useGame } from "@/lib/game/store"
+import { GEAR_CLASSES, ITEM_MAP, PILOT_PROFILES } from "@/lib/game/data"
+import { computeStats, baseStatsAtLevel, maxHp, xpForLevel } from "@/lib/game/engine"
+import { Button } from "@/components/ui/button"
+import { Panel } from "./shared"
+import { Brain, Crosshair, Gauge, Shield, Sparkles, Target, Wrench, Lock, UserRound, Plane, Check, RefreshCw } from "lucide-react"
+import { cn } from "@/lib/utils"
+import type { PilotStatKey } from "@/lib/game/types"
 
-const STAT_META: Record<PilotStatKey, { label: string; icon: typeof Crosshair; desc: string }> = {
-  attack: { label: 'ATK', icon: Crosshair, desc: 'Sát thương phi cơ' },
-  defense: { label: 'DEF', icon: Shield, desc: 'Giáp và giảm sát thương' },
-  agility: { label: 'AGI', icon: Gauge, desc: 'Tốc độ và né tránh' },
-  shield: { label: 'SHIELD', icon: Sparkles, desc: 'Lá chắn năng lượng' },
-  vision: { label: 'VISION', icon: Target, desc: 'Tầm nhìn vũ khí' },
+const STAT_META: Record<PilotStatKey, { label: string; icon: typeof Crosshair }> = {
+  attack: { label: "ATK", icon: Crosshair }, defense: { label: "DEF", icon: Shield }, agility: { label: "AGI", icon: Gauge }, shield: { label: "SHIELD", icon: Sparkles }, vision: { label: "VISION", icon: Target },
 }
+const PILOT_SKILL_VALUES: Record<PilotStatKey, string> = { attack: "+30 ATK / điểm", defense: "+10 DEF / điểm", agility: "+10 ATK +5 DEF / điểm", shield: "+200 HP shield / điểm", vision: "+10 ATK +5 DEF / điểm" }
 
 export function PilotPanel() {
   const { state, dispatch } = useGame()
+  const [selectorOpen, setSelectorOpen] = useState(false)
+  const [previewId, setPreviewId] = useState(state.pilot.profileId)
   const pilot = state.pilot
   const profile = PILOT_PROFILES.find((p) => p.id === pilot.profileId) ?? PILOT_PROFILES[0]
+  const preview = PILOT_PROFILES.find((p) => p.id === previewId) ?? profile
   const aircraft = state.gears.find((g) => g.uid === pilot.aircraftUid) ?? state.gears[0]
-  const aircraftDef = aircraft ? GEAR_CLASSES[aircraft.cls] : null
+  const aircraftStats = aircraft ? computeStats(aircraft, state.inventory) : null
+  const aircraftBase = aircraft ? baseStatsAtLevel(aircraft.cls, aircraft.level) : null
   const locked = state.day - pilot.selectedAtDay < 10
-  
-  return (
-    <div className="space-y-4">
-      <div className="grid gap-4 xl:grid-cols-[380px_1fr]">
-        <Panel title="Chọn phi công" icon={<UserRound className="size-4" />}>
-          <div className="space-y-2">
-            {PILOT_PROFILES.map((p) => {
-              const active = p.id === profile.id
-              const PIcon = GEAR_CLASSES[p.gear].cls === p.gear ? Plane : Plane
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => dispatch({ type: 'SELECT_PILOT', profileId: p.id })}
-                  className={cn(
-                    'flex w-full items-center gap-3 border p-2 text-left transition-colors',
-                    active
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border/50 bg-card/40 hover:border-primary/50'
-                  )}
-                >
-                  <img
-                    src={p.avatar}
-                    alt={`Chân dung ${p.name}`}
-                    className="size-14 shrink-0 object-cover"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 font-display font-bold">
-                      <span>{p.name}</span>
-                      <span className="text-xs" style={{ color: GEAR_CLASSES[p.gear].color }}>
-                        {p.gear}-GEAR
-                      </span>
-                    </div>
-                    <div className="text-[10px] text-muted-foreground">
-                      {p.specialty} · {p.aircraftName}
-                    </div>
-                  </div>
-                  <PIcon className="size-4 text-primary" />
-                </button>
-              )
-            })}
-          </div>
-          <div className="mt-3 border border-dashed border-accent/50 bg-accent/5 p-2 text-[10px] text-muted-foreground">
-            {locked ? (
-              <>
-                <Lock className="mr-1 inline size-3 text-accent" />
-                Phi công hiện tại còn {10 - (state.day - pilot.selectedAtDay)} ngày khóa chuyển đổi.
-              </>
-            ) : (
-              'Có thể thay phi công. Mỗi lần thay cần chờ 10 ngày chiến thuật.'
-            )}
-          </div>
-        </Panel>
-        <Panel
-          title={`${profile.name} · ${profile.specialty}`}
-          icon={<Brain className="size-4" />}
-          action={<span className="font-mono text-[10px] text-accent">LV {pilot.level} · {pilot.xp} XP</span>}
-        >
-          <div className="flex gap-4">
-            <img
-              src={profile.avatar}
-              alt={`Chân dung ${profile.name}`}
-              className="h-36 w-28 shrink-0 object-cover border border-primary/50"
-            />
-            <div className="min-w-0 flex-1">
-              <div className="font-display text-lg font-bold text-primary">{profile.description}</div>
-              <div className="mt-1 text-xs text-muted-foreground">
-                {profile.gender} · {profile.age} tuổi · Phi cơ liên kết: <span className="text-foreground">{profile.aircraftName}</span>
-              </div>
-              <div className="mt-3 space-y-2">
-                {profile.trail.map((t) => (
-                  <div key={t} className="border border-yellow-500/30 bg-yellow-500/5 px-2 py-1.5 text-xs text-yellow-300">
-                    <span className="mr-2 font-mono text-yellow-400">TRAIL</span>{t}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </Panel>
-      </div>
+  const selectPilot = () => { dispatch({ type: "SELECT_PILOT", profileId: preview.id }); setSelectorOpen(false) }
 
-      <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-        <Panel
-          title="Thông tin nhân vật"
-          icon={<Sparkles className="size-4" />}
-          action={<span className="text-[10px] text-accent">{pilot.skillPoints} ĐIỂM KỸ NĂNG</span>}
-        >
-          <div className="grid gap-2 sm:grid-cols-2">
-            {(Object.keys(STAT_META) as PilotStatKey[]).map((key) => {
-              const meta = STAT_META[key]
-              const Icon = meta.icon
-              const white = profile.baseStats[key]
-              const blue = pilot.stats[key] - white
-              const gold = Math.round(white * (profile.trail.length > 1 ? 0.1 : 0.2))
-              return (
-                <div key={key} className="border border-border/50 bg-card/40 p-2">
-                  <div className="flex items-center gap-2">
-                    <Icon className="size-4 text-primary" />
-                    <span className="font-display text-xs font-bold">{meta.label}</span>
-                    <span className="ml-auto font-mono text-sm font-bold text-foreground">
-                      {white + blue + gold}
-                    </span>
-                  </div>
-                  <div className="mt-1 text-[10px] text-muted-foreground">{meta.desc}</div>
-                  <div className="mt-1 font-mono text-[10px]">
-                    <span className="font-bold text-white">{white}</span>
-                    <span className="text-sky-400"> +{blue} gear</span>
-                    <span className="text-yellow-400"> +{gold} trail</span>
-                  </div>
-                  <Button
-                    className="mt-2 h-6 w-full text-[10px]"
-                    size="sm"
-                    variant="secondary"
-                    disabled={!pilot.skillPoints}
-                    onClick={() => dispatch({ type: 'ALLOCATE_PILOT_STAT', stat: key })}
-                  >
-                    + CỘNG ĐIỂM
-                  </Button>
-                </div>
-              )
-            })}
-          </div>
-          <div className="mt-3 border-t border-border/50 pt-2 text-[10px] text-muted-foreground">
-            <span className="font-bold text-white">TRẮNG</span> chỉ số gốc · <span className="text-sky-400">XANH</span> trang bị ·
-            <span className="text-yellow-400">VÀNG</span> trail nhân vật · Total = tổng hiệu lực
-          </div>
-        </Panel>
-        <Panel title="Kỹ năng ACE" icon={<Sparkles className="size-4" />}>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {pilot.skills.map((skill) => (
-              <div
-                key={skill.id}
-                className={cn(
-                  'border p-2.5',
-                  skill.category === 'gear' ? 'border-primary/40 bg-primary/5' : 'border-border/50 bg-card/40'
-                )}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="font-display text-xs font-semibold">{skill.name}</div>
-                  <Button
-                    size="xs"
-                    variant="secondary"
-                    disabled={!pilot.skillPoints || skill.level >= skill.maxLevel}
-                    onClick={() => dispatch({ type: 'UPGRADE_PILOT_SKILL', skillId: skill.id })}
-                  >
-                    Lv {skill.level}/{skill.maxLevel}
-                  </Button>
-                </div>
-                <div className="mt-1 text-[10px] text-muted-foreground">
-                  {skill.desc} · <span className="text-primary">{skill.effect}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Panel>
-      </div>
-
-      <Panel
-        title="Phi cơ cá nhân · trang bị liên kết"
-        icon={<Wrench className="size-4" />}
-        action={<span className="font-mono text-[10px] text-accent">1 PILOT / 1 AIRCRAFT</span>}
-      >
-        {aircraft && aircraftDef && (
-          <div className="space-y-4">
-            <div className="flex flex-col gap-3 border border-primary/30 bg-primary/5 p-4 sm:flex-row sm:items-center">
-              <div
-                className="flex h-20 w-20 items-center justify-center rounded-full border-2 text-3xl font-display font-bold"
-                style={{ borderColor: aircraftDef.color, color: aircraftDef.color }}
-              >
-                {aircraft.cls}
-              </div>
-              <div className="flex-1">
-                <div className="font-display text-xl font-bold">{aircraft.name}</div>
-                <div className="text-xs uppercase tracking-wider text-muted-foreground">
-                  {aircraftDef.name} · {aircraftDef.role} · {profile.armorType}
-                </div>
-                <div className="mt-2 h-2 overflow-hidden bg-secondary">
-                  <div
-                    className="h-full bg-primary"
-                    style={{
-                      width: `${Math.min(100, (aircraft.hpCurrent / (aircraftDef.base.hp + 500)) * 100)}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-              {(['weapon', 'missile', 'armor', 'engine', 'shield'] as const).map((slot) => {
-                const uid = aircraft.equipped[slot]
-                const item = uid ? state.inventory.find((i) => i.uid === uid) : null
-                const def = item ? ITEM_MAP[item.defId] : null
-                return (
-                  <div key={slot} className="border border-border/50 bg-card/40 p-2">
-                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{slot}</div>
-                    <div className="mt-1 text-xs font-semibold">{def?.name ?? 'Chưa lắp'}</div>
-                    <div className="text-[10px] text-sky-400">
-                      {def ? `+${item?.level ?? 0} · ${def.rarity}` : 'Mở kho Trang bị'}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-      </Panel>
+  return <div className="space-y-4">
+    <div className="flex items-center justify-between border border-primary/30 bg-primary/5 p-3">
+      <div><div className="font-display text-sm font-bold uppercase tracking-wider">Phi công liên kết: <span className="text-primary">{profile.name} · {profile.gear}-GEAR</span></div><div className="text-[10px] text-muted-foreground">Phi cơ gắn liền, thay phi công chỉ mở lại sau 10 ngày chiến thuật.</div></div>
+      <Button onClick={() => { setPreviewId(profile.id); setSelectorOpen(true) }} disabled={locked} className="gap-2 text-xs"><UserRound className="size-3.5" /> {locked ? `Khóa ${10 - (state.day - pilot.selectedAtDay)} ngày` : "Chọn phi công"}</Button>
     </div>
-  )
+
+    {selectorOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"><div className="w-full max-w-5xl border border-primary/40 bg-panel p-4 shadow-2xl"><div className="mb-3 flex items-center justify-between"><div><div className="font-display text-lg font-bold text-primary">CHỌN PHI CÔNG / GEAR</div><div className="text-[10px] text-muted-foreground">Chọn xong sẽ khóa 10 ngày. Dữ liệu level và kỹ năng của từng phi công được lưu riêng.</div></div><Button variant="ghost" size="sm" onClick={() => setSelectorOpen(false)}>Đóng</Button></div><div className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
+      <div className="space-y-2">{PILOT_PROFILES.map((p) => <button key={p.id} type="button" onClick={() => setPreviewId(p.id)} className={cn("flex w-full items-center gap-3 border p-2 text-left", preview.id === p.id ? "border-primary bg-primary/10" : "border-border/50 bg-card/40")}><img src={p.avatar} alt={`Chân dung ${p.name}`} className="size-16 object-cover"/><div className="flex-1"><div className="font-display font-bold">{p.name} <span className="text-xs text-primary">{p.gear}-GEAR</span></div><div className="text-[10px] text-muted-foreground">{p.specialty} · {p.aircraftName}</div></div>{p.id === pilot.profileId && <Check className="size-4 text-accent"/>}</button>)}</div>
+      <div className="border border-border/60 bg-card/40 p-3"><div className="flex gap-4"><img src={preview.avatar} alt={`Chân dung ${preview.name}`} className="h-44 w-32 object-cover border border-primary/50"/><div><div className="font-display text-xl font-bold text-primary">{preview.name} · {preview.gear}-GEAR</div><div className="mt-1 text-xs text-muted-foreground">{preview.gender} · {preview.age} tuổi · {preview.specialty}</div><p className="mt-3 text-sm">{preview.description}</p><div className="mt-3 font-display text-xs font-bold uppercase text-yellow-300">TRAIL SKILL</div>{preview.trail.map((t) => <div key={t} className="mt-1 text-xs text-yellow-200">◆ {t}</div>)}</div></div><div className="mt-4 grid grid-cols-5 gap-2">{(Object.keys(STAT_META) as PilotStatKey[]).map((key) => <div key={key} className="border border-border/50 p-2 text-center"><div className="font-mono text-lg font-bold text-white">{preview.baseStats[key]}</div><div className="text-[9px] text-muted-foreground">{STAT_META[key].label}</div></div>)}</div><Button className="mt-4 w-full" onClick={selectPilot} disabled={preview.id === pilot.profileId || locked}><Check className="size-4"/> {preview.id === pilot.profileId ? "Đang sử dụng" : "Xác nhận thay phi công"}</Button></div>
+    </div></div></div>}
+
+    <div className="grid gap-4 xl:grid-cols-[380px_1fr]"><Panel title="Thông tin nhân vật" icon={<Brain className="size-4" />} action={<span className="font-mono text-[10px] text-accent">LV {pilot.level} · {pilot.xp} XP</span>}><div className="flex gap-4"><img src={profile.avatar} alt={`Chân dung ${profile.name}`} className="h-40 w-32 object-cover border border-primary/50"/><div className="min-w-0"><div className="font-display text-lg font-bold text-primary">{profile.name} · {profile.gear}-GEAR</div><p className="mt-1 text-xs text-muted-foreground">{profile.description}</p><div className="mt-3 space-y-1 text-xs">{profile.trail.map((t) => <div key={t} className="text-yellow-300">◆ {t}</div>)}</div><div className="mt-3 h-1.5 bg-secondary"><div className="h-full bg-accent" style={{ width: `${Math.min(100, pilot.xp / xpForLevel(pilot.level) * 100)}%` }}/></div><div className="mt-1 text-[10px] text-muted-foreground">EXP đến cấp tiếp: {xpForLevel(pilot.level) - pilot.xp}</div></div></div></Panel>
+      <Panel title="TỔNG HỢP CHỈ SỐ CUỐI" icon={<Target className="size-4" />}><div className="mb-3 text-[10px] text-muted-foreground">Trắng = nhân vật · Xanh = phi cơ/trang bị · Tím = kỹ năng · Vàng = trail · Tổng = chỉ số cuối.</div><div className="grid grid-cols-2 gap-2 sm:grid-cols-5">{(Object.keys(STAT_META) as PilotStatKey[]).map((key) => { const Icon = STAT_META[key].icon; const white = profile.baseStats[key] + pilot.stats[key] - profile.baseStats[key]; const blue = key === "attack" ? Math.round((aircraftStats?.attack ?? 0) / 30) : key === "defense" ? Math.round((aircraftStats?.defense ?? 0) / 10) : key === "shield" ? Math.round((aircraftStats?.hp ?? 0) / 200) : Math.round((aircraftStats?.speed ?? 0) / 10); const purple = pilot.skills.filter((s) => s.category === "common" && s.level > 1).reduce((n, s) => n + s.level, 0); const gold = Math.round(profile.baseStats[key] * (profile.id === "marcus" && key === "attack" ? .2 : .1)); return <div key={key} className="border border-border/50 bg-card/40 p-2"><div className="flex items-center gap-1"><Icon className="size-3.5 text-primary"/><span className="font-display text-xs font-bold">{STAT_META[key].label}</span><b className="ml-auto text-lg text-white">{white + blue + purple + gold}</b></div><div className="mt-2 font-mono text-[10px]"><span className="text-white">{white} cơ bản</span><br/><span className="text-sky-400">+{blue} phi cơ/đồ</span><br/><span className="text-violet-400">+{purple} skill</span><br/><span className="text-yellow-400">+{gold} trail</span></div></div>})}</div></Panel>
+    </div>
+
+    <div className="grid gap-4 xl:grid-cols-2"><Panel title="Kỹ năng nhân vật" icon={<Sparkles className="size-4" />} action={<span className="text-[10px] text-accent">{pilot.skillPoints} điểm kỹ năng</span>}><div className="grid gap-2 sm:grid-cols-2">{(Object.keys(STAT_META) as PilotStatKey[]).map((key) => <div key={key} className="flex items-center justify-between border border-border/50 p-2"><div><div className="font-display text-xs font-bold">Skill {STAT_META[key].label}</div><div className="text-[10px] text-muted-foreground">{PILOT_SKILL_VALUES[key]}</div></div><Button size="xs" variant="secondary" disabled={!pilot.skillPoints} onClick={() => dispatch({ type: "ALLOCATE_PILOT_STAT", stat: key })}>+1</Button></div>)}</div></Panel><Panel title={`Kỹ năng ACE · ${profile.gear}-GEAR`} icon={<Sparkles className="size-4" />}><div className="grid gap-2 sm:grid-cols-2">{pilot.skills.filter((s) => s.category === "gear").map((skill) => <div key={skill.id} className="border border-primary/30 bg-primary/5 p-2"><div className="flex justify-between font-display text-xs font-bold"><span>{skill.name}</span><Button size="xs" variant="secondary" disabled={!pilot.skillPoints || skill.level >= skill.maxLevel} onClick={() => dispatch({ type: "UPGRADE_PILOT_SKILL", skillId: skill.id })}>Lv {skill.level}</Button></div><div className="mt-1 text-[10px] text-muted-foreground">{skill.desc} · {skill.effect}</div></div>)}</div></Panel></div>
+
+    <Panel title={`Phi cơ cá nhân · ${aircraft?.name ?? ""}`} icon={<Plane className="size-4"/>} action={<Button size="sm" variant="outline" onClick={() => aircraft && dispatch({ type: "REPAIR_GEAR", uid: aircraft.uid })}><RefreshCw className="size-3"/> Sửa chữa</Button>}><div className="grid gap-3 lg:grid-cols-[180px_1fr]"><div className="border border-primary/30 bg-primary/5 p-3"><div className="font-display text-3xl font-bold text-primary">{aircraft?.cls}-GEAR</div><div className="mt-2 text-xs text-muted-foreground">LV {aircraft?.level} · {aircraft?.xp} XP</div><div className="mt-2 text-[10px] text-muted-foreground">HP {aircraft?.hpCurrent} / {aircraftStats?.hp}</div><div className="mt-1 h-1.5 bg-secondary"><div className="h-full bg-primary" style={{width: `${aircraftStats ? aircraft.hpCurrent / aircraftStats.hp * 100 : 0}%`}}/></div><div className="mt-3 text-[10px] text-muted-foreground">{GEAR_CLASSES[aircraft?.cls ?? profile.gear].tagline}</div></div><div><div className="mb-2 text-xs font-bold uppercase tracking-wider text-primary">Khe trang bị cá nhân</div><div className="grid grid-cols-2 gap-2 sm:grid-cols-5">{(["weapon", "missile", "armor", "engine", "shield"] as const).map((slot) => { const uid = aircraft?.equipped[slot]; const item = uid ? state.inventory.find((i) => i.uid === uid) : undefined; const def = item ? ITEM_MAP[item.defId] : undefined; return <div key={slot} className="border border-border/50 bg-card/40 p-2"><div className="text-[9px] uppercase text-muted-foreground">{slot}</div><div className="mt-1 text-xs font-semibold">{def?.name ?? "Chưa lắp"}</div><div className="text-[10px] text-sky-400">{def ? `+${item?.level ?? 0}` : "Lắp từ kho Trang bị"}</div>{!def && state.inventory.find((i) => ITEM_MAP[i.defId]?.slot === slot) && <Button size="xs" className="mt-2 w-full" onClick={() => { const candidate = state.inventory.find((i) => ITEM_MAP[i.defId]?.slot === slot); if (candidate && aircraft) dispatch({ type: "EQUIP_ITEM", gearUid: aircraft.uid, itemUid: candidate.uid }) }}>Lắp</Button>}</div>})}</div><div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">{aircraftStats && (["hp", "attack", "defense", "speed", "evasion"] as const).map((key) => <div key={key} className="border border-border/50 p-2 text-center"><div className="text-[9px] uppercase text-muted-foreground">{key}</div><div className="font-mono text-sm font-bold text-sky-400">{aircraftStats[key]}</div></div>)}</div></div></div></Panel>
+  </div>
 }
 
 export default PilotPanel
