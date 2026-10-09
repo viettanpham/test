@@ -7,21 +7,30 @@ import {
   baseDefense,
   buildingUpgradeCost,
   gearCap,
+  prosperity,
+  prosperityTier,
 } from "@/lib/game/engine"
 import { useGame } from "@/lib/game/store"
 import {
   Building2,
   Crosshair,
   Factory,
+  FerrisWheel,
   Hammer,
+  Handshake,
+  Home,
+  Landmark,
   Layers,
   Lock,
   ShieldHalf,
+  Sparkles,
+  Store,
   Users,
   Warehouse,
   Zap,
 } from "lucide-react"
 import { Panel, ResourcePill, formatNum } from "./shared"
+import { DistrictPanel } from "./district-panel"
 import type { BuildingKey, Resources } from "@/lib/game/types"
 
 const BUILDING_ICON: Record<BuildingKey, typeof Zap> = {
@@ -33,16 +42,35 @@ const BUILDING_ICON: Record<BuildingKey, typeof Zap> = {
   barracks: Users,
   turret: Crosshair,
   shipyard: Hammer,
+  finance: Landmark,
+  alliance: Handshake,
+  residential: Home,
+  trade: Store,
+  entertainment: FerrisWheel,
 }
 
 export function BasePanel() {
   const { state, dispatch } = useGame()
   const commandLevel = state.buildings.command
+  const capturedCount = state.sectors.filter((s) => s.captured).length
+  const prosperityScore = prosperity(state.population, state.buildings, capturedCount)
 
   return (
     <div className="flex flex-col gap-4">
       {/* Base summary */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+        <SummaryCard
+          icon={<Home className="size-4" />}
+          label="Dân cư"
+          value={formatNum(state.population)}
+          color="var(--color-accent)"
+        />
+        <SummaryCard
+          icon={<Sparkles className="size-4" />}
+          label="Độ phồn vinh"
+          value={`${prosperityScore} · ${prosperityTier(prosperityScore)}`}
+          color="var(--color-gear-s)"
+        />
         <SummaryCard
           icon={<Users className="size-4" />}
           label="Quân số"
@@ -58,7 +86,7 @@ export function BasePanel() {
         <SummaryCard
           icon={<Warehouse className="size-4" />}
           label="Sức chứa hạm đội"
-          value={`${state.gears.length} / ${gearCap(state.buildings)}`}
+          value={`${state.gears.length} / ${gearCap(state.buildings, state.population, state.districts)}`}
           color="var(--color-gear-i)"
         />
         <SummaryCard
@@ -88,6 +116,8 @@ export function BasePanel() {
           Chiếm khu vực để tăng quân số. Nâng Doanh Trại để mở rộng giới hạn.
         </p>
       </Panel>
+
+      <DistrictPanel />
 
       {/* Buildings */}
       <Panel title="Công trình căn cứ" icon={<Building2 className="size-4" />}>

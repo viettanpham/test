@@ -115,6 +115,28 @@ export type BuildingKey =
   | "barracks"
   | "turret"
   | "shipyard"
+  | "finance"
+  | "alliance"
+  | "residential"
+  | "trade"
+  | "entertainment"
+
+export type DistrictKey = "finance" | "service" | "industry" | "power" | "repair" | "shipbuilding"
+
+/** percent of population assigned to each district (step 5, min 5, total <= 100) */
+export type DistrictAllocation = Record<DistrictKey, number>
+
+export type DistrictBonus = {
+  credits: number
+  crystal: number
+  alloy: number
+  energy: number
+  /** flat HP restored per gear per day */
+  repairHp: number
+  /** flat reduction applied to every gear build cost component */
+  shipDiscount: number
+  gearCap: number
+}
 
 export type BuildingDef = {
   key: BuildingKey
@@ -198,6 +220,8 @@ export type GameState = {
   gears: Gear[]
   inventory: ItemInstance[]
   buildings: Record<BuildingKey, number> // key -> level
+  population: number
+  districts: DistrictAllocation
   sectors: Sector[]
   lastBattle: BattleResult | null
   eventLog: { day: number; text: string }[]

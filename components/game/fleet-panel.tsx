@@ -56,7 +56,7 @@ export function FleetPanel() {
   const [buildName, setBuildName] = useState("")
 
   const selected = state.gears.find((g) => g.uid === selectedUid) ?? state.gears[0]
-  const cap = gearCap(state.buildings)
+  const cap = gearCap(state.buildings, state.population, state.districts)
 
   // map item uid -> gear name it's equipped on
   const equippedOn = useMemo(() => {

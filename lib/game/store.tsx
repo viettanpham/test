@@ -7,20 +7,36 @@ import {
   useReducer,
   type ReactNode,
 } from "react"
-import { BUILDING_ORDER, GEAR_CLASSES, ITEM_MAP, PILOT_PROFILES, SECTORS } from "./data"
+import {
+  BUILDING_DEFS,
+  BUILDING_ORDER,
+  CAPTURE_BASE_POPULATION,
+  DISTRICT_DEFS,
+  GEAR_CLASSES,
+  ITEM_MAP,
+  MAIN_BASE_POPULATION,
+  PILOT_PROFILES,
+  SECTORS,
+} from "./data"
 import {
   armyCap as calcArmyCap,
   baseStatsAtLevel,
   buildingUpgradeCost,
+  captureImmigrants,
   dailyProduction,
+  districtBonus,
+  gearBuildCost,
   gearCap as calcGearCap,
   hangarRepairPerDay,
   maxHp,
+  populationGrowthRate,
   simulateBattle,
   xpForLevel,
 } from "./engine"
 import type {
   BuildingKey,
+  DistrictAllocation,
+  DistrictKey,
   EquipSlot,
   GameState,
   Gear,
@@ -59,8 +75,20 @@ function initialBuildings(): Record<BuildingKey, number> {
     barracks: 1,
     turret: 1,
     shipyard: 1,
+    finance: 0,
+    alliance: 0,
+    residential: 0,
+    trade: 0,
+    entertainment: 0,
   }
 }
+
+function initialDistricts(): DistrictAllocation {
+  return { finance: 5, service: 5, industry: 5, power: 5, repair: 5, shipbuilding: 5 }
+}
+
+const PILOT_STARTING_POINTS = 3
+const PILOT_POINTS_PER_LEVEL = 2
 
 function createInitialState(): GameState {
   const g1 = makeGear("A", "Vanguard")
@@ -85,6 +113,8 @@ function createInitialState(): GameState {
     gears: [g1, g2, g3, g4, g5],
     inventory: [i1, i2, i3, makeItem("w_pulse"), makeItem("a_plate")],
     buildings,
+    population: MAIN_BASE_POPULATION,
+    districts: initialDistricts(),
     sectors: SECTORS.map((s) => ({ ...s })),
     lastBattle: null,
     eventLog: [{ day: 1, text: "Sở chỉ huy được kích hoạt. Chào mừng, Chỉ Huy." }],
@@ -140,6 +170,7 @@ export type Action =
   | { type: "ALLOCATE_PILOT_STAT"; stat: import("./types").PilotStatKey }
   | { type: "UPGRADE_PILOT_SKILL"; skillId: string }
   | { type: "SELECT_PILOT"; profileId: string }
+  | { type: "SET_DISTRICT"; key: DistrictKey; value: number }
 
 const REPAIR_CREDIT_PER_HP = 0.4
 
@@ -149,32 +180,32 @@ function reducer(state: GameState, action: Action): GameState {
       return { ...state, commander: action.name.trim() || "Chỉ Huy" }
 
     case "NEXT_DAY": {
-      const prod = dailyProduction(state.buildings)
+      const prod = dailyProduction(state.buildings, state.population, state.districts)
       const repairFrac = hangarRepairPerDay(state.buildings)
+      const repairFlat = districtBonus(state.population, state.districts).repairHp
       const gears = state.gears.map((g) => {
         const mh = maxHp(g, state.inventory)
-        return { ...g, hpCurrent: Math.min(mh, g.hpCurrent + Math.round(mh * repairFrac)) }
+        return { ...g, hpCurrent: Math.min(mh, g.hpCurrent + Math.round(mh * repairFrac) + repairFlat) }
       })
-      return {
-        ...state,
-        day: state.day + 1,
-        resources: gain(state.resources, prod),
-        gears,
-        eventLog: pushEvent(
-          { ...state, day: state.day + 1 },
-          `Ngày mới: +${prod.credits}⬡ +${prod.alloy}◆ +${prod.energy}⚡. Hangar sửa chữa hạm đội.`,
-        ),
+      const day = state.day + 1
+      const next = { ...state, day }
+      let eventLog = pushEvent(
+        next,
+        `Ngày mới: +${prod.credits}⬡ +${prod.alloy}◆ +${prod.energy}⚡ +${prod.crystal} tinh thể. Hangar sửa chữa hạm đội.`,
+      )
+      let population = state.population
+      if ((day - 1) % 2 === 0) {
+        const growth = Math.floor(population * populationGrowthRate(state.buildings))
+        population += growth
+        eventLog = [{ day, text: `Dân cư tăng ${growth.toLocaleString("vi-VN")} người trong thời gian qua.` }, ...eventLog].slice(0, 40)
       }
+      return { ...next, resources: gain(state.resources, prod), gears, population, eventLog }
     }
 
     case "BUILD_GEAR": {
       const def = GEAR_CLASSES[action.cls]
-      const discount = 1 - Math.min(0.4, state.buildings.shipyard * 0.05)
-      const cost: Partial<Resources> = {}
-      for (const [k, v] of Object.entries(def.buildCost)) {
-        cost[k as keyof Resources] = Math.round((v as number) * discount)
-      }
-      if (state.gears.length >= calcGearCap(state.buildings)) return state
+      const cost = gearBuildCost(def.buildCost, state.buildings, state.population, state.districts)
+      if (state.gears.length >= calcGearCap(state.buildings, state.population, state.districts)) return state
       if (!canAfford(state.resources, cost)) return state
       const g = makeGear(action.cls, action.name.trim() || def.name)
       return {
@@ -300,6 +331,7 @@ function reducer(state: GameState, action: Action): GameState {
       const cost = buildingUpgradeCost(action.key, level)
       // command gates other buildings
       if (action.key !== "command" && level >= state.buildings.command + 2) return state
+      if (level >= BUILDING_DEFS[action.key].maxLevel) return state
       if (!canAfford(state.resources, cost)) return state
       const buildings = { ...state.buildings, [action.key]: level + 1 }
       return {
@@ -307,16 +339,35 @@ function reducer(state: GameState, action: Action): GameState {
         resources: spend(state.resources, cost),
         buildings,
         armyCap: calcArmyCap(buildings),
-        eventLog: pushEvent(state, `Nâng cấp công trình lên cấp ${level + 1}.`),
+        eventLog: pushEvent(
+          state,
+          level === 0
+            ? `Xây dựng ${BUILDING_DEFS[action.key].name}.`
+            : `Nâng cấp ${BUILDING_DEFS[action.key].name} lên cấp ${level + 1}.`,
+        ),
       }
+    }
+
+    case "SET_DISTRICT": {
+      const value = Math.max(5, Math.min(100, Math.round(action.value / 5) * 5))
+      const others = (Object.keys(state.districts) as DistrictKey[])
+        .filter((k) => k !== action.key)
+        .reduce((sum, k) => sum + state.districts[k], 0)
+      const clamped = Math.min(value, 100 - others)
+      if (clamped < 5 || clamped === state.districts[action.key]) return state
+      return { ...state, districts: { ...state.districts, [action.key]: clamped } }
     }
 
     case "LAUNCH_BATTLE": {
       const sector = state.sectors.find((s) => s.id === action.sectorId)
       if (!sector || sector.captured) return state
-      const fleet = state.gears.filter((g) => action.gearUids.includes(g.uid))
+      const pilotUid = state.pilot.hasSelectedPilot ? state.pilot.aircraftUid : null
+      const pilotGear = pilotUid ? state.gears.find((g) => g.uid === pilotUid && g.hpCurrent > 0) : undefined
+      const escorts = state.gears.filter((g) => g.uid !== pilotUid && action.gearUids.includes(g.uid))
+      const fleet = pilotGear ? [pilotGear, ...escorts] : escorts
       if (fleet.length === 0) return state
-      const result = simulateBattle(fleet, state.inventory, sector)
+      const fleetUids = fleet.map((g) => g.uid)
+      const result = simulateBattle(fleet, state.inventory, sector, state.pilot)
 
       // apply surviving durability
       const hpByUid = new Map(result.playerUnits.map((u) => [u.uid, u.hp]))
@@ -328,8 +379,24 @@ function reducer(state: GameState, action: Action): GameState {
       let sectors = state.sectors
       let army = state.army
       let events = state.eventLog
+      let population = state.population
+      let pilot = state.pilot
 
       if (result.victory) {
+        const enemyDamage = result.enemyUnits.reduce((s, u) => s + (u.maxHp - Math.max(0, u.hp)), 0)
+        const immigrants = captureImmigrants(enemyDamage)
+        population += CAPTURE_BASE_POPULATION + immigrants
+        if (pilotGear && (hpByUid.get(pilotGear.uid) ?? 0) > 0) {
+          let xp = pilot.xp + Math.round(sector.threat / 2)
+          let level = pilot.level
+          let skillPoints = pilot.skillPoints
+          while (xp >= xpForLevel(level)) {
+            xp -= xpForLevel(level)
+            level += 1
+            skillPoints += PILOT_POINTS_PER_LEVEL
+          }
+          pilot = { ...pilot, xp, level, skillPoints }
+        }
         resources = gain(resources, sector.reward)
         sectors = state.sectors.map((s) =>
           s.id === sector.id ? { ...s, captured: true } : s,
@@ -338,7 +405,7 @@ function reducer(state: GameState, action: Action): GameState {
         // XP for survivors
         const xpGain = Math.round(sector.threat / 3)
         gears = gears.map((g) => {
-          if (!action.gearUids.includes(g.uid) || g.hpCurrent <= 0) return g
+          if (!fleetUids.includes(g.uid) || g.hpCurrent <= 0) return g
           let xp = g.xp + xpGain
           let level = g.level
           while (xp >= xpForLevel(level)) {
@@ -351,6 +418,13 @@ function reducer(state: GameState, action: Action): GameState {
           state,
           `Chiếm được ${sector.name}! +${sector.reward.credits ?? 0}⬡, +${sector.troopReward} quân.`,
         )
+        events = [
+          {
+            day: state.day,
+            text: `Căn cứ mới thu nhận ${immigrants.toLocaleString("vi-VN")} di dân và +${CAPTURE_BASE_POPULATION.toLocaleString("vi-VN")} dân cư cơ sở.`,
+          },
+          ...events,
+        ].slice(0, 40)
       } else {
         events = pushEvent(state, `Thất bại tại ${sector.name}. Hạm đội chịu tổn thất.`)
       }
@@ -361,6 +435,8 @@ function reducer(state: GameState, action: Action): GameState {
         resources,
         sectors,
         army,
+        population,
+        pilot,
         lastBattle: result,
         eventLog: events,
       }
@@ -404,7 +480,7 @@ function reducer(state: GameState, action: Action): GameState {
       if (!profile || (state.pilot.hasSelectedPilot && profile.id === state.pilot.profileId) || (state.pilot.hasSelectedPilot && state.day - state.pilot.selectedAtDay < 10)) return state
       const aircraft = state.gears.find((g) => g.cls === profile.gear)
       if (!aircraft) return state
-      return { ...state, pilot: { ...state.pilot, profileId: profile.id, name: profile.name, stats: { ...profile.baseStats }, skills: profile.skills.map((s) => ({ ...s })), avatar: profile.avatar, aircraftUid: aircraft.uid, selectedAtDay: state.day, hasSelectedPilot: true }, eventLog: pushEvent(state, `Đổi phi công sang ${profile.name}. Kỹ năng và phi cơ liên kết đã kích hoạt.`) }
+      return { ...state, pilot: { ...state.pilot, skillPoints: state.pilot.hasSelectedPilot ? state.pilot.skillPoints : state.pilot.skillPoints + PILOT_STARTING_POINTS, profileId: profile.id, name: profile.name, stats: { ...profile.baseStats }, skills: profile.skills.map((s) => ({ ...s })), avatar: profile.avatar, aircraftUid: aircraft.uid, selectedAtDay: state.day, hasSelectedPilot: true }, eventLog: pushEvent(state, `Đổi phi công sang ${profile.name}. Kỹ năng và phi cơ liên kết đã kích hoạt.`) }
     }
 
     case "DISMISS_BATTLE":
