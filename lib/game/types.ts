@@ -14,9 +14,27 @@ export type PilotSkill = {
   level: number
   maxLevel: number
   effect: string
+  category: "common" | "gear"
+}
+
+export type PilotProfile = {
+  id: string
+  name: string
+  age: number
+  gender: string
+  description: string
+  specialty: string
+  gear: GearClass
+  avatar: string
+  aircraftName: string
+  armorType: string
+  baseStats: PilotStats
+  trail: string[]
+  skills: PilotSkill[]
 }
 
 export type Pilot = {
+  profileId: string
   name: string
   level: number
   xp: number
@@ -25,6 +43,7 @@ export type Pilot = {
   skills: PilotSkill[]
   avatar: string
   aircraftUid: string
+  selectedAtDay: number
 }
 
 export type Resources = {

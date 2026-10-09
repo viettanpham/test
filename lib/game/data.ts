@@ -56,6 +56,22 @@ export const GEAR_CLASSES: Record<GearClass, GearClassDef> = {
 
 export const GEAR_ORDER: GearClass[] = ["A", "B", "I", "M"]
 
+const commonSkills = (gear: GearClass, skills: [string, string, string][]) => [
+  { id: "fire-shot", name: "Fire Shot", desc: "Tăng sức tấn công vũ khí thường", level: 1, maxLevel: 5, effect: "+4% weapon ATK / cấp", category: "common" as const },
+  { id: "missile-shot", name: "Missile Shot", desc: "Tăng sức tấn công tên lửa", level: 1, maxLevel: 5, effect: "+4% missile ATK / cấp", category: "common" as const },
+  { id: "concentration", name: "Concentration", desc: "Tăng độ chính xác và xác suất trúng", level: 1, maxLevel: 5, effect: "+3% accuracy / cấp", category: "common" as const },
+  { id: "evasion-up", name: "Evasion Up", desc: "Nâng cao khả năng né tránh", level: 1, maxLevel: 5, effect: "+3 EVA / cấp", category: "common" as const },
+  { id: "defense-up", name: "Defense Up", desc: "Tăng chỉ số phòng thủ", level: 1, maxLevel: 5, effect: "+3% DEF / cấp", category: "common" as const },
+  ...skills.map(([id, name, desc]) => ({ id, name, desc, level: 1, maxLevel: 5, effect: "+8% hiệu lực / cấp", category: "gear" as const })),
+]
+
+export const PILOT_PROFILES = [
+  { id: "marcus", name: "Marcus", age: 30, gender: "Nam", description: "Chiến binh dày dạn, chuyên gia vũ khí", specialty: "Weapons Specialist", gear: "A" as const, avatar: "/images/marcus-portrait.png", aircraftName: "Vanguard", armorType: "Heavy Armor", baseStats: { attack: 10, defense: 5, agility: 4, shield: 8, vision: 3 }, trail: ["+20% sát thương vũ khí Cannon", "+30% chỉ số trang bị ARMOR"], skills: commonSkills("A", [["siege-mode", "Siege Mode", "Chuyển sang chế độ pháo đài, tăng tầm bắn"], ["snare-shot", "Snare Shot", "Bắn đạn ghìm, làm chậm mục tiêu"], ["barrier", "Barrier", "Dựng khiên chắn cho phi cơ"]]) },
+  { id: "valentine", name: "Valentine", age: 22, gender: "Nữ", description: "Phi công cứu hộ quyến rũ và tận tâm", specialty: "Rescue / Support", gear: "M" as const, avatar: "/images/valentine-portrait.png", aircraftName: "Aurora", armorType: "Support Armor", baseStats: { attack: 3, defense: 8, agility: 4, shield: 9, vision: 6 }, trail: ["+30% chỉ số trang bị ARMOR", "+30% DEF phi cơ", "+30% hiệu quả hồi máu đồng minh"], skills: commonSkills("M", [["healing-field", "Healing Field", "Tạo vùng hồi phục cho toàn hạm đội"], ["raging-fire", "Raging Fire", "Kích hoạt hỏa lực hỗ trợ"], ["full-recovery", "Full Recovery", "Hồi phục mạnh cho một phi cơ"]]) },
+  { id: "alviss", name: "Alviss", age: 24, gender: "Nam", description: "Chiến thuật gia với đôi mắt như diều hâu", specialty: "Tactical Interceptor", gear: "I" as const, avatar: "/images/alviss-portrait.png", aircraftName: "Falcon", armorType: "Light Armor", baseStats: { attack: 11, defense: 3, agility: 12, shield: 2, vision: 2 }, trail: ["+10% chỉ số trang bị WEAPON", "+30% chỉ số MISSILE", "+10% chỉ số ENGINE"], skills: commonSkills("I", [["frenzy", "Frenzy", "Tăng tốc độ khai hỏa và sát thương"], ["overbooster", "Overbooster", "Đẩy động cơ vượt giới hạn"], ["berserker", "Berserker", "Tăng sức mạnh khi HP thấp"]]) },
+  { id: "eric", name: "Eric", age: 22, gender: "Nam", description: "Phi công điềm đạm, thiên tài điều khiển oanh tạc cơ", specialty: "Aircraft Specialist", gear: "B" as const, avatar: "/images/eric-portrait.png", aircraftName: "Hammerfall", armorType: "Siege Armor", baseStats: { attack: 15, defense: 5, agility: 2, shield: 6, vision: 2 }, trail: ["+50% chỉ số trang bị MISSILE"], skills: commonSkills("B", [["ground-bombing", "Ground Bombing Mode", "Oanh tạc mặt đất, phá căn cứ"], ["air-bombing", "Air Bombing Mode", "Tập trung hỏa lực trên không"], ["big-boom", "Big Boom", "Đạn nổ diện rộng cực mạnh"]]) },
+] as const
+
 export const ITEM_DEFS: ItemDef[] = [
   // Weapons
   {
