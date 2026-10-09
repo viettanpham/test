@@ -4,6 +4,29 @@ export type StatKey = "hp" | "attack" | "defense" | "speed" | "evasion" | "energ
 
 export type Stats = Record<StatKey, number>
 
+export type PilotStatKey = "attack" | "defense" | "agility" | "shield" | "vision"
+export type PilotStats = Record<PilotStatKey, number>
+
+export type PilotSkill = {
+  id: string
+  name: string
+  desc: string
+  level: number
+  maxLevel: number
+  effect: string
+}
+
+export type Pilot = {
+  name: string
+  level: number
+  xp: number
+  skillPoints: number
+  stats: PilotStats
+  skills: PilotSkill[]
+  avatar: string
+  aircraftUid: string
+}
+
 export type Resources = {
   credits: number
   alloy: number
@@ -147,6 +170,7 @@ export type BattleResult = {
 export type GameState = {
   commander: string
   day: number
+  pilot: Pilot
   resources: Resources
   army: number // current troop count
   armyCap: number
