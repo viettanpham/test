@@ -1,6 +1,7 @@
 import type {
   BuildingDef,
   BuildingKey,
+  DistrictKey,
   GearClass,
   GearClassDef,
   ItemDef,
@@ -207,7 +208,7 @@ export const BUILDING_DEFS: Record<BuildingKey, BuildingDef> = {
     name: "Sở Chỉ Huy",
     desc: "Trung tâm căn cứ. Nâng cấp để mở khóa cấp công trình khác.",
     effect: "+ giới hạn cấp công trình, + uy tín",
-    maxLevel: 10,
+    maxLevel: 30,
     baseCost: { credits: 2000, alloy: 600, crystal: 40 },
     costScale: 1.8,
   },
@@ -216,7 +217,7 @@ export const BUILDING_DEFS: Record<BuildingKey, BuildingDef> = {
     name: "Nhà Chứa (Hangar)",
     desc: "Sửa chữa và bảo dưỡng phi thuyền. Tăng tốc độ hồi phục.",
     effect: "+ hồi durability mỗi ngày, + số Gear tối đa",
-    maxLevel: 10,
+    maxLevel: 30,
     baseCost: { credits: 1200, alloy: 400 },
     costScale: 1.6,
   },
@@ -225,7 +226,7 @@ export const BUILDING_DEFS: Record<BuildingKey, BuildingDef> = {
     name: "Nhà Máy Vũ Khí",
     desc: "Chế tạo vũ khí, trang bị. Giảm chi phí sản xuất.",
     effect: "- chi phí chế tạo trang bị",
-    maxLevel: 10,
+    maxLevel: 30,
     baseCost: { credits: 1400, alloy: 500, crystal: 20 },
     costScale: 1.6,
   },
@@ -234,7 +235,7 @@ export const BUILDING_DEFS: Record<BuildingKey, BuildingDef> = {
     name: "Lò Phản Ứng",
     desc: "Sản xuất năng lượng mỗi ngày cho căn cứ.",
     effect: "+ Năng lượng / ngày",
-    maxLevel: 12,
+    maxLevel: 30,
     baseCost: { credits: 900, alloy: 260 },
     costScale: 1.5,
   },
@@ -243,7 +244,7 @@ export const BUILDING_DEFS: Record<BuildingKey, BuildingDef> = {
     name: "Xưởng Luyện Kim",
     desc: "Khai thác & tinh luyện hợp kim mỗi ngày.",
     effect: "+ Hợp kim / ngày",
-    maxLevel: 12,
+    maxLevel: 30,
     baseCost: { credits: 900, alloy: 200 },
     costScale: 1.5,
   },
@@ -252,7 +253,7 @@ export const BUILDING_DEFS: Record<BuildingKey, BuildingDef> = {
     name: "Doanh Trại",
     desc: "Tăng giới hạn quân số cho hạm đội viễn chinh.",
     effect: "+ giới hạn quân số",
-    maxLevel: 10,
+    maxLevel: 30,
     baseCost: { credits: 1100, alloy: 340 },
     costScale: 1.55,
   },
@@ -261,7 +262,7 @@ export const BUILDING_DEFS: Record<BuildingKey, BuildingDef> = {
     name: "Tháp Phòng Thủ",
     desc: "Phòng thủ căn cứ trước phản kích của địch.",
     effect: "+ phòng thủ căn cứ",
-    maxLevel: 10,
+    maxLevel: 30,
     baseCost: { credits: 800, alloy: 420, crystal: 15 },
     costScale: 1.5,
   },
@@ -270,9 +271,54 @@ export const BUILDING_DEFS: Record<BuildingKey, BuildingDef> = {
     name: "Xưởng Đóng Tàu",
     desc: "Đóng phi thuyền mới nhanh & rẻ hơn.",
     effect: "- chi phí đóng Gear, + Gear tối đa",
-    maxLevel: 10,
+    maxLevel: 30,
     baseCost: { credits: 1600, alloy: 560, crystal: 30 },
     costScale: 1.7,
+  },
+  finance: {
+    key: "finance",
+    name: "Trung Tâm Tài Chính",
+    desc: "Quản lý ngân khố và đầu tư liên hành tinh.",
+    effect: "+250 credits/ngày mỗi cấp",
+    maxLevel: 30,
+    baseCost: { credits: 1500, alloy: 300 },
+    costScale: 1.45,
+  },
+  alliance: {
+    key: "alliance",
+    name: "Khu Liên Hợp Liên Minh",
+    desc: "Cảng neo đậu chung của các đồng minh.",
+    effect: "+1 sức chứa hạm đội mỗi cấp",
+    maxLevel: 30,
+    baseCost: { credits: 2500, alloy: 900, crystal: 40 },
+    costScale: 1.5,
+  },
+  residential: {
+    key: "residential",
+    name: "Khu Dân Cư",
+    desc: "Nhà ở cho di dân, nền tảng của nhân lực và quân số.",
+    effect: "+0.5% tăng dân số, +60 quân số, +100 credits/ngày mỗi cấp",
+    maxLevel: 30,
+    baseCost: { credits: 1200, alloy: 500 },
+    costScale: 1.42,
+  },
+  trade: {
+    key: "trade",
+    name: "Khu Giao Dịch",
+    desc: "Chợ liên sao trao đổi hàng hóa và khoáng sản.",
+    effect: "+400 credits, +40 hợp kim, +1 tinh thể/ngày mỗi cấp",
+    maxLevel: 30,
+    baseCost: { credits: 2200, alloy: 400, crystal: 20 },
+    costScale: 1.5,
+  },
+  entertainment: {
+    key: "entertainment",
+    name: "Khu Vui Chơi",
+    desc: "Giải trí, sòng bạc và đấu trường mô phỏng.",
+    effect: "+500 credits/ngày mỗi cấp",
+    maxLevel: 30,
+    baseCost: { credits: 1800, alloy: 350 },
+    costScale: 1.48,
   },
 }
 
@@ -285,7 +331,28 @@ export const BUILDING_ORDER: BuildingKey[] = [
   "refinery",
   "barracks",
   "turret",
+  "finance",
+  "alliance",
+  "residential",
+  "trade",
+  "entertainment",
 ]
+
+export const MAX_BUILDING_LEVEL = 30
+
+export const DISTRICT_ORDER: DistrictKey[] = ["finance", "service", "industry", "power", "repair", "shipbuilding"]
+
+export const DISTRICT_DEFS: Record<DistrictKey, { name: string; desc: string; perHundred: string }> = {
+  finance: { name: "Tài chính", desc: "Credits / ngày", perHundred: "+50 credits/ngày" },
+  service: { name: "Dịch vụ", desc: "Tinh thể / ngày", perHundred: "+1 tinh thể/ngày" },
+  industry: { name: "Công nghiệp", desc: "Hợp kim / ngày", perHundred: "+5 hợp kim/ngày" },
+  power: { name: "Điện lực / Lò phản ứng", desc: "Năng lượng / ngày", perHundred: "+10 năng lượng/ngày" },
+  repair: { name: "Sửa chữa", desc: "HP hồi / Gear / ngày", perHundred: "+1.000 HP/ngày" },
+  shipbuilding: { name: "Đóng tàu", desc: "Giảm chi phí, + Gear tối đa", perHundred: "-100 chi phí, +1 Gear" },
+}
+
+export const MAIN_BASE_POPULATION = 100_000
+export const CAPTURE_BASE_POPULATION = 10_000
 
 export const SECTORS: Sector[] = [
   {

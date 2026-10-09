@@ -5,8 +5,12 @@ import type {
   BattleUnitSnapshot,
   Building,
   BuildingKey,
+  DistrictAllocation,
+  DistrictBonus,
+  DistrictKey,
   Gear,
   ItemInstance,
+  Pilot,
   Resources,
   Sector,
   Stats,
@@ -92,7 +96,8 @@ export function buildingUpgradeCost(key: BuildingKey, currentLevel: number): Par
   return out
 }
 
-export function dailyProduction(buildings: Record<BuildingKey, number>): Resources {
+/** production from core infrastructure (command, refinery, reactor) */
+export function coreProduction(buildings: Record<BuildingKey, number>): Resources {
   return {
     credits: 300 + buildings.command * 120,
     alloy: 60 + buildings.refinery * 55,
@@ -101,12 +106,146 @@ export function dailyProduction(buildings: Record<BuildingKey, number>): Resourc
   }
 }
 
-export function armyCap(buildings: Record<BuildingKey, number>): number {
-  return 120 + buildings.barracks * 60
+/** production from civic buildings (finance, residential, trade, entertainment) */
+export function civicProduction(buildings: Record<BuildingKey, number>): Resources {
+  return {
+    credits:
+      (buildings.finance ?? 0) * 250 +
+      (buildings.residential ?? 0) * 100 +
+      (buildings.trade ?? 0) * 400 +
+      (buildings.entertainment ?? 0) * 500,
+    alloy: (buildings.trade ?? 0) * 40,
+    energy: 0,
+    crystal: (buildings.trade ?? 0) * 1,
+  }
 }
 
-export function gearCap(buildings: Record<BuildingKey, number>): number {
-  return 4 + buildings.hangar + buildings.shipyard
+export const POP_PER_UNIT = 100
+
+export function districtPopulation(population: number, pct: number): number {
+  return Math.floor((population * pct) / 100)
+}
+
+export function districtBonus(population: number, districts?: DistrictAllocation): DistrictBonus {
+  const units = (k: DistrictKey) =>
+    districts ? Math.floor(districtPopulation(population, districts[k]) / POP_PER_UNIT) : 0
+  return {
+    credits: units("finance") * 50,
+    crystal: units("service") * 1,
+    alloy: units("industry") * 5,
+    energy: units("power") * 10,
+    repairHp: units("repair") * 1000,
+    shipDiscount: units("shipbuilding") * 100,
+    gearCap: units("shipbuilding") * 1,
+  }
+}
+
+export function dailyProduction(
+  buildings: Record<BuildingKey, number>,
+  population = 0,
+  districts?: DistrictAllocation,
+): Resources {
+  const core = coreProduction(buildings)
+  const civic = civicProduction(buildings)
+  const d = districtBonus(population, districts)
+  return {
+    credits: core.credits + civic.credits + d.credits,
+    alloy: core.alloy + civic.alloy + d.alloy,
+    energy: core.energy + civic.energy + d.energy,
+    crystal: core.crystal + civic.crystal + d.crystal,
+  }
+}
+
+export function armyCap(buildings: Record<BuildingKey, number>): number {
+  return 120 + buildings.barracks * 60 + (buildings.residential ?? 0) * 60
+}
+
+export function gearCap(
+  buildings: Record<BuildingKey, number>,
+  population = 0,
+  districts?: DistrictAllocation,
+): number {
+  return (
+    4 +
+    buildings.hangar +
+    buildings.shipyard +
+    (buildings.alliance ?? 0) +
+    districtBonus(population, districts).gearCap
+  )
+}
+
+/** gear build cost after shipyard % discount and shipbuilding district flat discount (floor 10%) */
+export function gearBuildCost(
+  base: Partial<Resources>,
+  buildings: Record<BuildingKey, number>,
+  population = 0,
+  districts?: DistrictAllocation,
+): Partial<Resources> {
+  const pct = 1 - Math.min(0.4, buildings.shipyard * 0.05)
+  const flat = districtBonus(population, districts).shipDiscount
+  const out: Partial<Resources> = {}
+  for (const [k, v] of Object.entries(base)) {
+    const original = v as number
+    out[k as keyof Resources] = Math.max(Math.round(original * 0.1), Math.round(original * pct) - flat)
+  }
+  return out
+}
+
+export function populationGrowthRate(buildings: Record<BuildingKey, number>): number {
+  return 0.05 + (buildings.residential ?? 0) * 0.005
+}
+
+/** immigrants received when capturing a sector: 10% of enemy HP destroyed, clamped 100..100,000 */
+export function captureImmigrants(enemyHpDamage: number): number {
+  return Math.max(100, Math.min(100_000, Math.floor(enemyHpDamage * 0.1)))
+}
+
+export function prosperity(
+  population: number,
+  buildings: Record<BuildingKey, number>,
+  capturedCount: number,
+): number {
+  const civic =
+    (buildings.finance ?? 0) +
+    (buildings.residential ?? 0) +
+    (buildings.trade ?? 0) +
+    (buildings.entertainment ?? 0)
+  return Math.round(population / 5000 + civic * 3 + capturedCount * 5)
+}
+
+export function prosperityTier(score: number): string {
+  if (score >= 300) return "Thịnh vượng"
+  if (score >= 150) return "Phồn hoa"
+  if (score >= 60) return "Ổn định"
+  return "Sơ khai"
+}
+
+// ---------- Pilot helpers ----------
+
+/** flat bonuses the linked pilot grants their personal aircraft */
+export function pilotAircraftBonus(pilot: Pilot): { attack: number; defense: number; shieldHp: number } {
+  if (!pilot.hasSelectedPilot) return { attack: 0, defense: 0, shieldHp: 0 }
+  const s = pilot.stats
+  return {
+    attack: s.attack * 30 + s.agility * 10 + s.vision * 10,
+    defense: s.defense * 10 + s.agility * 5 + s.vision * 5,
+    shieldHp: s.shield * 200,
+  }
+}
+
+export function pilotAircraftStats(gear: Gear, inventory: ItemInstance[], pilot: Pilot): Stats {
+  const stats = computeStats(gear, inventory)
+  if (!pilot.hasSelectedPilot || pilot.aircraftUid !== gear.uid) return stats
+  const b = pilotAircraftBonus(pilot)
+  return { ...stats, attack: stats.attack + b.attack, defense: stats.defense + b.defense }
+}
+
+export function fleetPowerWithPilot(gears: Gear[], inventory: ItemInstance[], pilot: Pilot): number {
+  const shield = pilotAircraftBonus(pilot).shieldHp
+  return gears.reduce((sum, g) => {
+    const isPilot = pilot.hasSelectedPilot && g.uid === pilot.aircraftUid
+    return sum + gearPower(pilotAircraftStats(g, inventory, pilot)) + (isPilot ? Math.round(shield * 0.5) : 0)
+  }, 0)
 }
 
 export function baseDefense(buildings: Record<BuildingKey, number>): number {
@@ -133,6 +272,8 @@ type SimUnit = {
   name: string
   cls: Gear["cls"] | "enemy"
   hp: number
+  /** absorbs damage before hp; does not persist after battle */
+  shield: number
   maxHp: number
   attack: number
   defense: number
@@ -161,17 +302,22 @@ export function simulateBattle(
   gears: Gear[],
   inventory: ItemInstance[],
   sector: Sector,
+  pilot?: Pilot,
 ): BattleResult {
   const rand = rng(Math.floor(sector.threat + gears.length * 7 + Date.now() % 100000))
   const log: BattleLogEntry[] = []
+  const pilotUid = pilot?.hasSelectedPilot ? pilot.aircraftUid : null
+  const pilotShield = pilot ? pilotAircraftBonus(pilot).shieldHp : 0
 
   const playerUnits: SimUnit[] = gears.map((g) => {
-    const s = computeStats(g, inventory)
+    const isPilot = g.uid === pilotUid
+    const s = isPilot && pilot ? pilotAircraftStats(g, inventory, pilot) : computeStats(g, inventory)
     return {
       uid: g.uid,
-      name: g.name,
+      name: isPilot && pilot ? `${pilot.name} · ${g.name}` : g.name,
       cls: g.cls,
       hp: g.hpCurrent,
+      shield: isPilot ? pilotShield : 0,
       maxHp: s.hp,
       attack: s.attack,
       defense: s.defense,
@@ -195,6 +341,7 @@ export function simulateBattle(
         : `${sector.faction} #${i + 1}`,
       cls: "enemy",
       hp,
+      shield: 0,
       maxHp: hp,
       attack: Math.round(perThreat * (isCore ? 1.3 : 0.9)),
       defense: Math.round(perThreat * 0.4),
@@ -210,6 +357,14 @@ export function simulateBattle(
     text: `Tiến vào ${sector.name} — lực lượng ${sector.faction}. Giao chiến bắt đầu!`,
     kind: "info",
   })
+  const leader = playerUnits.find((u) => u.uid === pilotUid)
+  if (leader) {
+    log.push({
+      turn: 0,
+      text: `Phi công ${leader.name} dẫn đầu hạm đội${pilotShield ? ` (khiên ${pilotShield} HP)` : ""}.`,
+      kind: "info",
+    })
+  }
 
   const alive = (u: SimUnit[]) => u.filter((x) => x.hp > 0)
   let turn = 1
@@ -269,7 +424,9 @@ export function simulateBattle(
       const mitig = base * (target.defense / (target.defense + 400))
       let dmg = Math.max(8, Math.round(base - mitig))
       dmg = Math.round(dmg * (0.85 + rand() * 0.3))
-      target.hp -= dmg
+      const absorbed = Math.min(target.shield, dmg)
+      target.shield -= absorbed
+      target.hp -= dmg - absorbed
 
       log.push({
         turn,

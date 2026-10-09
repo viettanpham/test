@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { GEAR_CLASSES } from "@/lib/game/data"
-import { computeStats, fleetPower, gearPower, maxHp } from "@/lib/game/engine"
+import { computeStats, fleetPower, gearPower, maxHp, pilotAircraftStats } from "@/lib/game/engine"
 import { useGame } from "@/lib/game/store"
 import { cn } from "@/lib/utils"
 import {
@@ -65,10 +65,20 @@ export function MapPanel() {
     return { x: s.x, y: s.y }
   }
 
-  const selectedGears = state.gears.filter((g) => fleet.includes(g.uid))
-  const attackPower = fleetPower(selectedGears, state.inventory)
+  const pilotUid = state.pilot.hasSelectedPilot ? state.pilot.aircraftUid : null
+  const pilotGear = pilotUid ? state.gears.find((g) => g.uid === pilotUid) : undefined
+  const escortGears = state.gears.filter((g) => g.uid !== pilotUid && fleet.includes(g.uid))
+  const pilotPower =
+    pilotGear && pilotGear.hpCurrent > 0
+      ? gearPower(pilotAircraftStats(pilotGear, state.inventory, state.pilot))
+      : 0
+  const attackPower = fleetPower(escortGears, state.inventory) + pilotPower
+  const orderedGears = pilotGear
+    ? [pilotGear, ...state.gears.filter((g) => g.uid !== pilotUid)]
+    : state.gears
 
   const toggleGear = (uid: string) =>
+    uid === pilotUid ||
     setFleet((prev) =>
       prev.includes(uid) ? prev.filter((x) => x !== uid) : [...prev, uid],
     )
@@ -218,7 +228,7 @@ export function MapPanel() {
                     onClick={() => {
                       dispatch({ type: "LAUNCH_BATTLE", sectorId: selected.id, gearUids: fleet })
                     }}
-                    disabled={fleet.length === 0}
+                    disabled={escortGears.length === 0 && pilotPower === 0}
                     className="font-display tracking-wider"
                   >
                     <Swords className="size-4" />
@@ -247,19 +257,26 @@ export function MapPanel() {
         {/* Fleet picker */}
         <Panel title="Chọn hạm đội xuất kích" icon={<Rocket className="size-4" />} bodyClassName="p-2">
           <ul className="flex flex-col gap-1.5">
-            {state.gears.map((g) => {
-              const stats = computeStats(g, state.inventory)
-              const selectedG = fleet.includes(g.uid)
+            {orderedGears.map((g) => {
+              const isPilot = g.uid === pilotUid
+              const stats = isPilot
+                ? pilotAircraftStats(g, state.inventory, state.pilot)
+                : computeStats(g, state.inventory)
+              const selectedG = isPilot || fleet.includes(g.uid)
               const hpPct = (g.hpCurrent / maxHp(g, state.inventory)) * 100
               return (
                 <li key={g.uid}>
                   <button
                     onClick={() => toggleGear(g.uid)}
+                    aria-pressed={selectedG}
+                    title={isPilot ? "Phi cơ phi công luôn xuất kích" : undefined}
                     className={cn(
                       "flex w-full items-center gap-2.5 border p-2 text-left transition-colors",
-                      selectedG
-                        ? "border-primary/60 bg-primary/10"
-                        : "border-border/50 bg-card/30 opacity-60 hover:opacity-100",
+                      isPilot
+                        ? "cursor-default border-yellow-400/70 bg-yellow-400/10"
+                        : selectedG
+                          ? "border-primary/60 bg-primary/10"
+                          : "border-border/50 bg-card/30 opacity-60 hover:opacity-100",
                     )}
                   >
                     <span
@@ -270,7 +287,14 @@ export function MapPanel() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between">
-                        <span className="truncate font-display text-sm font-600">{g.name}</span>
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          <span className="truncate font-display text-sm font-600">{g.name}</span>
+                          {isPilot && (
+                            <span className="shrink-0 border border-yellow-400/60 px-1 text-[9px] font-bold uppercase tracking-wider text-yellow-400">
+                              Phi công
+                            </span>
+                          )}
+                        </span>
                         <span className="font-mono text-[10px] text-primary/80">
                           PWR {formatNum(gearPower(stats))}
                         </span>
