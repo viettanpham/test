@@ -44,6 +44,8 @@ export type Pilot = {
   avatar: string
   aircraftUid: string
   selectedAtDay: number
+  /** Day-one accounts must explicitly choose a pilot before the linked gear is active. */
+  hasSelectedPilot: boolean
 }
 
 export type Resources = {

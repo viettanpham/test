@@ -84,7 +84,7 @@ export function WarRoom() {
   )
 }
 
-export function AvatarStrip() { return <div className="relative h-8 w-24 overflow-hidden rounded-sm border border-border/60 bg-card"><img src="/images/pilot-portraits.png" alt="Chân dung phi công" className="h-full w-full object-cover object-left" /><span className="absolute bottom-0 right-1 text-[8px] font-700 text-white drop-shadow">COMMANDER</span></div> }
+export function AvatarStrip() { return <div className="relative size-8 overflow-hidden rounded-sm border border-primary/60 bg-card"><img src="/images/marcus-portrait.png" alt="Chân dung chỉ huy Marcus" className="h-full w-full object-cover" /><span className="sr-only">COMMANDER</span></div> }
 
 void Crosshair
 void Shield
