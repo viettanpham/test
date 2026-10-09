@@ -1,0 +1,132 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-panel: var(--panel);
+  --color-panel-foreground: var(--panel-foreground);
+  --color-grid-line: var(--grid-line);
+
+  /* Gear identity colors (load-bearing: distinguish the 4 ship classes) */
+  --color-gear-a: var(--gear-a);
+  --color-gear-b: var(--gear-b);
+  --color-gear-i: var(--gear-i);
+  --color-gear-m: var(--gear-m);
+
+  --font-sans: var(--font-rajdhani), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-orbitron), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
+
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.5);
+}
+
+:root {
+  color-scheme: dark;
+
+  --background: oklch(0.17 0.025 255);
+  --foreground: oklch(0.93 0.02 230);
+
+  --card: oklch(0.22 0.03 255);
+  --card-foreground: oklch(0.93 0.02 230);
+
+  --panel: oklch(0.205 0.028 255);
+  --panel-foreground: oklch(0.93 0.02 230);
+
+  --popover: oklch(0.2 0.03 255);
+  --popover-foreground: oklch(0.93 0.02 230);
+
+  --primary: oklch(0.75 0.15 205);
+  --primary-foreground: oklch(0.16 0.03 255);
+
+  --secondary: oklch(0.3 0.035 255);
+  --secondary-foreground: oklch(0.93 0.02 230);
+
+  --muted: oklch(0.27 0.03 255);
+  --muted-foreground: oklch(0.68 0.03 240);
+
+  --accent: oklch(0.78 0.16 65);
+  --accent-foreground: oklch(0.18 0.03 255);
+
+  --destructive: oklch(0.62 0.22 22);
+  --destructive-foreground: oklch(0.96 0.02 230);
+
+  --border: oklch(0.4 0.04 240 / 35%);
+  --input: oklch(0.4 0.04 240 / 40%);
+  --ring: oklch(0.75 0.15 205);
+
+  --grid-line: oklch(0.55 0.08 220 / 12%);
+
+  --gear-a: oklch(0.68 0.2 25);
+  --gear-b: oklch(0.65 0.19 300);
+  --gear-i: oklch(0.75 0.15 205);
+  --gear-m: oklch(0.75 0.16 150);
+
+  --radius: 0.4rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    background-position: center top;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+  .clip-corner {
+    clip-path: polygon(
+      0 0,
+      calc(100% - 10px) 0,
+      100% 10px,
+      100% 100%,
+      10px 100%,
+      0 calc(100% - 10px)
+    );
+  }
+  .text-glow {
+    text-shadow: 0 0 12px oklch(0.75 0.15 205 / 45%);
+  }
+  .scanline {
+    background-image: repeating-linear-gradient(
+      0deg,
+      oklch(0.75 0.15 205 / 4%) 0px,
+      oklch(0.75 0.15 205 / 4%) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  }
+}
